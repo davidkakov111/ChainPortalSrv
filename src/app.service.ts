@@ -5,6 +5,7 @@ import { assetType, blockchainFees, blockchainSymbols } from './shared/types';
 import { PrismaService } from './prisma/prisma/prisma.service';
 import { SolanaFeesService } from './solana/solana-fees/solana-fees.service';
 import { MetaplexService } from './solana/metaplex/metaplex.service';
+import { HelperService } from './shared/helper/helper/helper.service';
 
 @Injectable()
 export class AppService {
@@ -12,7 +13,8 @@ export class AppService {
     private readonly configSrv: ConfigService,
     private readonly prismaSrv: PrismaService,
     private readonly solanaFeesSrv: SolanaFeesService,
-    private readonly metaplexSrv: MetaplexService
+    private readonly metaplexSrv: MetaplexService,
+    private readonly helperSrv: HelperService
   ) {}
 
   // Return client environment variables
@@ -47,11 +49,18 @@ export class AppService {
       } // TODO - Need to add options for another suported bchains later
     }
 
-    // Calculate the metadata upload costs
+    // Calculate & assign the metadata upload costs
     if (result.SOL) {
       const metadataUploadFee = await this.metaplexSrv.calcArweaveMetadataUploadFee(metadataByteSize);
       result.SOL += metadataUploadFee;
     } // TODO - Need to add options for another suported bchains later
+
+    // Round up the fees to 5 decimals
+    for (const key in result) {
+      if (result.hasOwnProperty(key) && result[key] !== undefined) {
+        result[key as keyof blockchainFees] = this.helperSrv.roundUpToFiveDecimals(result[key]);
+      }
+    }
 
     return result;
   }
