@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// Run the following command to generate the Prisma client:
+//    npx prisma generate
+// Create a migration:
+//    npx prisma migrate dev --name <migration name>
+// Apply the migration:
+//    npx prisma migrate deploy
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------- Enums ---------------------------------------------
+// Enum for AssetType
+enum AssetType {
+  NFT
+  Token
+}
+
+// Enum for Blockchain Symbols
+enum Bchain {
+  ETH
+  SOL
+  BSC
+  MATIC
+  ADA
+  XTZ
+  AVAX
+  FLOW
+  FTM
+  ALGO
+}
+// ---------------------------------- Enums ---------------------------------------------
+
+// ---------------------------------- Tables ---------------------------------------------
+// Table to store minting fees
+model MintingFee {
+  id           Int       @id @default(autoincrement()) // Auto-incrementing unique ID
+  assetType    AssetType                               // Enum for assettypes
+  bchainSymbol Bchain                                  // Enum for blockchain symbols
+  fee          Decimal                                 // Column for fee, supports both integers and decimals
+  updatedAt    DateTime  @updatedAt                    // Automatically updates on creation and modification
+
+  @@unique([assetType, bchainSymbol])                  // Compound unique constraint
+}
+// ---------------------------------- Tables ---------------------------------------------
