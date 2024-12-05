@@ -41,11 +41,20 @@ export class AppService {
       blockchainSymbols = blockchainSymbols.filter(symbol => symbol !== i.bchainSymbol);
     }
     
-    // Calculate the fees for the rest blockcahins
+    // Calculate & save the fees for the rest blockchains
     for (let i of blockchainSymbols) {
       if (i === "SOL") {
+        // Basic fees without metadata upload fees
         result.SOL = await this.solanaFeesSrv.calculateFees("mint", assetType);
-        await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);
+
+        // ChainPortal fees
+        if (assetType === "NFT") {
+          result.SOL += parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
+        } else if (assetType === "Token") {
+          result.SOL += parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
+        }
+        
+        await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);        
       } // TODO - Need to add options for another suported bchains later
     }
 
@@ -55,10 +64,10 @@ export class AppService {
       result.SOL += metadataUploadFee;
     } // TODO - Need to add options for another suported bchains later
 
-    // Round up the fees to 5 decimals
+    // Round up the fees to 4 decimals
     for (const key in result) {
       if (result.hasOwnProperty(key) && result[key] !== undefined) {
-        result[key as keyof blockchainFees] = this.helperSrv.roundUpToFiveDecimals(result[key]);
+        result[key as keyof blockchainFees] = this.helperSrv.roundUpToDecimals(result[key], 4);
       }
     }
 
