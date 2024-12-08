@@ -26,6 +26,12 @@ enum AssetType {
   Token
 }
 
+// Enum for OperationType
+enum OperationType {
+  mint
+  bridge
+}
+
 // Enum for Blockchain Symbols
 enum Bchain {
   ETH
@@ -51,5 +57,34 @@ model MintingFee {
   updatedAt    DateTime  @updatedAt                    // Automatically updates on creation and modification
 
   @@unique([assetType, bchainSymbol])                  // Compound unique constraint
+}
+
+// Main Transaction History table
+model MainTxHistory {
+  id              Int      @id @default(autoincrement()) // Auto-incrementing unique ID
+  operationType   OperationType                          // Enum for operation types
+  assetType       AssetType                              // Enum for asset types
+  blockchain      Bchain                                 // Enum for blockchain symbols
+  paymentPubKey   String                                 // Public key used for payment
+  paymentAmount   Decimal                                // Amount paid by the user
+  expenseAmount   Decimal                                // Expense incurred by the platform
+  date            DateTime   @default(now())             // Transaction date (default: current time)
+  
+  // Relation to table(s)
+  MintTxHistories MintTxHistory[]
+}
+
+// Mint Transaction History table
+model MintTxHistory {
+  id                  Int      @id @default(autoincrement()) // Auto-incrementing unique ID
+  mainTxHistoryId     Int                                    // Foreign key to MainTxHistory
+  paymentTxSignature  String                                 // Payment transaction signature
+  rewardTxs           Json                                   // JSON column for reward transactions {"txHash": string, "type": string (ex.: mint | metadataUpload)}[]
+
+  // Define the relation with table(s)
+  MainTxHistory MainTxHistory @relation(fields: [mainTxHistoryId], references: [id])
+
+  // Index for efficient queries (optional, but recommended)
+  @@index([mainTxHistoryId])
 }
 // ---------------------------------- Tables ---------------------------------------------

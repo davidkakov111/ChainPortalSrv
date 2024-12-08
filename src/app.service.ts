@@ -73,4 +73,10 @@ export class AppService {
 
     return result;
   }
+
+  // Return all transaction history by pubkey
+  async getAllTxHistory(pubkey: string) {
+    if (!pubkey) throw new HttpException('Missing pubkey', HttpStatus.BAD_REQUEST);
+    return await this.prismaSrv.getAllTxHistory(pubkey);
+  }
 }

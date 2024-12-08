@@ -60,4 +60,18 @@ export class PrismaService
       },
     });
   }
+
+  // Function to query all transaction history by pubkey
+  async getAllTxHistory(pubkey: string) {
+    return this.mainTxHistory.findMany({
+      where: {paymentPubKey: pubkey},
+      select: {
+        id: true,
+        assetType: true,
+        operationType: true,
+        blockchain: true,
+        date: true,
+      },
+    });
+  }
 }

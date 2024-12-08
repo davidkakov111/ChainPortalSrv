@@ -23,4 +23,10 @@ export class AppController {
     const blockchainSymbolsArray = blockchainSymbols?.split(',').map(symbol => symbol.trim()) as blockchainSymbols[];
     return this.appSrv.getMintFees(assetType, blockchainSymbolsArray, metadataByteSize);
   }
+
+  // Return all transaction history by publick key //ex.: http://localhost:3000/all-tx-history?pubkey=abcd
+  @Get('all-tx-history')
+  async getAllTxHistory(@Query('pubkey') pubkey: string) {
+    return this.appSrv.getAllTxHistory(pubkey);
+  }
 }
