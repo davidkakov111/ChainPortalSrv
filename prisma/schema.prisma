@@ -77,9 +77,9 @@ model MainTxHistory {
 // Mint Transaction History table
 model MintTxHistory {
   id                  Int      @id @default(autoincrement()) // Auto-incrementing unique ID
-  mainTxHistoryId     Int                                    // Foreign key to MainTxHistory
+  mainTxHistoryId     Int      @unique                       // Foreign key to MainTxHistory, must be unique
   paymentTxSignature  String                                 // Payment transaction signature
-  rewardTxs           Json                                   // JSON column for reward transactions {"txHash": string, "type": string (ex.: mint | metadataUpload)}[]
+  rewardTxs           Json                                   // JSON column for reward transactions {"txSignature": string, "type": string (ex.: mint | metadataUpload)}[]
 
   // Define the relation with table(s)
   MainTxHistory MainTxHistory @relation(fields: [mainTxHistoryId], references: [id])

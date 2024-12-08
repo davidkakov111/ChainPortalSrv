@@ -15,7 +15,7 @@ export class PrismaService
     await this.$disconnect(); // Disconnect from the database
   }
 
-  // Function to get recently calculated minting fees based on assetType and blockchainSymbols
+  // Get recently calculated minting fees based on assetType and blockchainSymbols
   async getMintingFees(assetType: assetType, blockchainSymbols: blockchainSymbols[]) {
     const twelveHoursAgo = new Date();
     twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
@@ -37,7 +37,7 @@ export class PrismaService
     });
   }
 
-  // Function to update or create a MintingFee record
+  // Update or create a MintingFee record
   async upsertMintingFee(
     assetType: assetType,
     bchainSymbol: blockchainSymbols,
@@ -61,7 +61,7 @@ export class PrismaService
     });
   }
 
-  // Function to query all transaction history by pubkey
+  // Query all transaction history by pubkey
   async getAllTxHistory(pubkey: string) {
     return this.mainTxHistory.findMany({
       where: {paymentPubKey: pubkey},
@@ -71,6 +71,17 @@ export class PrismaService
         operationType: true,
         blockchain: true,
         date: true,
+      },
+    });
+  }
+
+  // Get transaction details by tx id
+  async getTxDetails(txId: number) {
+    return await this.mainTxHistory.findUnique({
+      where: { id: txId }, // Search for the main transaction by txId
+      include: {
+        MintTxHistories: true, 
+        // TODO - Include associated bridge transaction history table later
       },
     });
   }

@@ -1,11 +1,12 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { cliEnv } from './shared/interfaces';
-import { assetType, blockchainFees, blockchainSymbols } from './shared/types';
+import { cliEnv, transaction } from './shared/interfaces';
+import { assetType, blockchainFees, blockchainSymbols, operationType } from './shared/types';
 import { PrismaService } from './prisma/prisma/prisma.service';
 import { SolanaFeesService } from './solana/solana-fees/solana-fees.service';
 import { MetaplexService } from './solana/metaplex/metaplex.service';
 import { HelperService } from './shared/helper/helper/helper.service';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class AppService {
@@ -78,5 +79,36 @@ export class AppService {
   async getAllTxHistory(pubkey: string) {
     if (!pubkey) throw new HttpException('Missing pubkey', HttpStatus.BAD_REQUEST);
     return await this.prismaSrv.getAllTxHistory(pubkey);
+  }
+
+  // Return transaction details by tx id
+  async getTxDetails(txId: number): Promise<transaction> {
+    if (!txId) throw new HttpException('Missing transaction id', HttpStatus.BAD_REQUEST);
+    
+    const txDetails = await this.prismaSrv.getTxDetails(txId);
+    if (!txDetails) throw new HttpException('Transaction not found', HttpStatus.NOT_FOUND);
+
+    // Modify the result to match the `transaction` interface
+    return {
+      id: txDetails.id,
+      operationType: txDetails.operationType as operationType,
+      assetType: txDetails.assetType as assetType,
+      blockchain: txDetails.blockchain as blockchainSymbols,
+      paymentPubKey: txDetails.paymentPubKey,
+      paymentAmount: new Decimal(txDetails.paymentAmount).toNumber(), // Convert Decimal to number
+      expenseAmount: new Decimal(txDetails.expenseAmount).toNumber(), // Convert Decimal to number
+      date: txDetails.date,
+      MintTxHistories: txDetails.MintTxHistories.map((mintTx) => ({
+        id: mintTx.id,
+        mainTxHistoryId: mintTx.mainTxHistoryId,
+        paymentTxSignature: mintTx.paymentTxSignature,
+        rewardTxs: Array.isArray(mintTx.rewardTxs) // Safely parse the JSON if it’s an array
+          ? mintTx.rewardTxs.map((reward: any) => ({
+              txSignature: reward.txSignature,
+              type: reward.type,
+            }))
+          : [],
+      })),
+    };
   }
 }

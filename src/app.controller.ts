@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { assetType, blockchainFees, blockchainSymbols } from './shared/types';
-import { cliEnv } from './shared/interfaces';
+import { cliEnv, transaction } from './shared/interfaces';
 
 @Controller()
 export class AppController {
@@ -21,12 +21,18 @@ export class AppController {
     @Query('metadataByteSize') metadataByteSize: number
   ): Promise<blockchainFees> {
     const blockchainSymbolsArray = blockchainSymbols?.split(',').map(symbol => symbol.trim()) as blockchainSymbols[];
-    return this.appSrv.getMintFees(assetType, blockchainSymbolsArray, metadataByteSize);
+    return this.appSrv.getMintFees(assetType, blockchainSymbolsArray, Number(metadataByteSize));
   }
 
   // Return all transaction history by publick key //ex.: http://localhost:3000/all-tx-history?pubkey=abcd
   @Get('all-tx-history')
   async getAllTxHistory(@Query('pubkey') pubkey: string) {
     return this.appSrv.getAllTxHistory(pubkey);
+  }
+
+  // Return transaction details by tx id //ex.: http://localhost:3000/tx-details?txId=1
+  @Get('tx-details')
+  async getTxDetails(@Query('txId') txId: number): Promise<transaction> {
+    return this.appSrv.getTxDetails(Number(txId));
   }
 }
