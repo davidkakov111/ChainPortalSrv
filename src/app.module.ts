@@ -5,6 +5,8 @@ import { SolanaModule } from './solana/solana.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { HelperModule } from './shared/helper/helper.module';
+import { WebshocketGateway } from './webshocket/webshocket.gateway';
+import { JobProcessor } from './shared/job.processor';
 
 @Module({
   imports: [
@@ -16,6 +18,6 @@ import { HelperModule } from './shared/helper/helper.module';
     HelperModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, WebshocketGateway, JobProcessor],
 })
 export class AppModule {}
