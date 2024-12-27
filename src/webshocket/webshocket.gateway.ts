@@ -15,6 +15,7 @@ import { JobProcessor } from '../shared/job.processor';
   cors: {
     origin: ['http://localhost:4200'], // TODO - Allow production origin also
   },
+  maxHttpBufferSize: 1e8, // 100 MB
 })
 export class WebshocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private jobProcessor: JobProcessor) {}
