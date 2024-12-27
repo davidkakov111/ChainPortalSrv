@@ -9,6 +9,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JobProcessor } from '../shared/job.processor';
+import { blockchainSymbols } from 'src/shared/types';
+import { NftMetadata } from 'src/shared/interfaces';
 
 // Webshocket gateway to handle websocket connections
 @WebSocketGateway({
@@ -33,15 +35,21 @@ export class WebshocketGateway implements OnGatewayConnection, OnGatewayDisconne
 
   // NFT mint websocket endpoint
   @SubscribeMessage('mint-nft')
-  async handleNftMintRequest(@ConnectedSocket() client: Socket, @MessageBody() data: any): Promise<void> {
+  async handleNftMintRequest(
+    @ConnectedSocket() client: Socket, 
+    @MessageBody() data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
+  ): Promise<void> {
     try {
-      // Create a function to emit status updates to the client
-      const emitStatus = (message: string) => {
+      // Create functions to emit status updates to the client
+      const emitStatus = (message: any) => {
         if (client.connected) client.emit('mint-nft-status', message);
       };
-
+      const emitError = (errorMessage: any) => {
+        if (client.connected) client.emit('mint-nft-error', errorMessage);
+      };
+      
       // Start the job processing (in the backround, independent of the client connection for security)
-      await this.jobProcessor.handleNftMintingJob(emitStatus, data);
+      await this.jobProcessor.handleNftMintingJob(emitStatus, emitError, data);
       
       client.disconnect();
     } catch (error) {
