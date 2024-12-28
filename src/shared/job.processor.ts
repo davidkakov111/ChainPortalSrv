@@ -1,10 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { blockchainSymbols } from './types';
 import { NftMetadata } from './interfaces';
+import { SolanaService } from 'src/solana/solana/solana.service';
+import { AppService } from 'src/app.service';
+import { HelperService } from './helper/helper/helper.service';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
 export class JobProcessor {
+
+  constructor(
+    private readonly appSrv: AppService,
+    private readonly helperSrv: HelperService,
+    private readonly solanaService: SolanaService,
+  ) {}
 
   // NFT minting job
   async handleNftMintingJob(
@@ -13,29 +22,36 @@ export class JobProcessor {
     data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
   ) {
     try {
+      const metadataByteSize = await this.helperSrv.calcNftMetadataByteSize(data.NftMetadata);
+
       if (data.bChainSymbol === 'SOL') {
 
+        // ------------------ Payment transaction validation ------------------
+        // Validate the payment transaction
+        const mintFees = await this.appSrv.getMintFees("NFT", ["SOL"], metadataByteSize);
+        const validation = await this.solanaService.validateSolPaymentTx(data.paymentTxSignature, mintFees.SOL);
+        if (!validation.isValid) {
+          wsClientEmitError({id: 0, errorMessage: validation.errorMessage});
+          return;
+        }
+        // Notify the client that the payment transaction is valid
+        wsClientEmit({id: 0, txId: null});
+        // ------------------ Payment transaction validation ------------------
 
 
-        // TODO - Process steps also asynchronously with await in sequence (this is just a test):
-        // for (let i = 0; i < 3; i++) {
-        //   await new Promise(resolve => setTimeout(resolve, 2000));
-        //   wsClientEmit(`${i} step completed`);
-        // }
+        // TODO - Upload metadata to IPFS and mint the NFT
 
 
 
 
       } else {
         // TODO - Add other blockchains logic here for NFT minting
-        wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for NFT minting'});
+        wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for NFT minting. Please use a different blockchain'});
       }
-
-      return { finalized: true };
     } catch (error) {
       console.error('NFT minting job failed:', error);
       wsClientEmitError({id: -1, errorMessage: 'NFT minting failed. Please try again.'});
-      // TODO - Think about it, bc maybe i need to refund the user
+      // TODO - Think about it, bc maybe i need to refund the user!!!
       throw error;
     }
   }
