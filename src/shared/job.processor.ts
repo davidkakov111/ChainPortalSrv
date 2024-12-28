@@ -22,7 +22,11 @@ export class JobProcessor {
     data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
   ) {
     try {
-      const metadataByteSize = await this.helperSrv.calcNftMetadataByteSize(data.NftMetadata);
+      const metadataByteSize = this.helperSrv.calcNftMetadataByteSize(data.NftMetadata);
+      if (typeof metadataByteSize === 'string') {
+        wsClientEmitError({id: 0, errorMessage: metadataByteSize});
+        return;
+      }
 
       if (data.bChainSymbol === 'SOL') {
 
@@ -51,7 +55,7 @@ export class JobProcessor {
     } catch (error) {
       console.error('NFT minting job failed:', error);
       wsClientEmitError({id: -1, errorMessage: 'NFT minting failed. Please try again.'});
-      // TODO - Think about it, bc maybe i need to refund the user!!!
+      // TODO - Think about it, bc maybe i need to refund the user!!! (Payment validation handle this, so i dont need to do it here)
       throw error;
     }
   }

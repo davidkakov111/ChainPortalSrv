@@ -10,15 +10,26 @@ export class HelperService {
     }
 
     // Calculate the NFT metadata size in bytes
-    async calcNftMetadataByteSize(metadata: NftMetadata) {
+    calcNftMetadataByteSize(metadata: NftMetadata): number | string {
         const { media, ...metaObj } = metadata;
 
         // Metadata size in bytes
         const metadataByteSize = new Blob([JSON.stringify(metaObj)]).size; 
 
         // Media file size in bytes
-        const arrayBuffer = await media?.arrayBuffer();
-        const mediaByteSize = arrayBuffer?.byteLength ?? 0; 
+        let mediaByteSize = 0;
+        if (media) {
+            if (media instanceof Uint8Array) {
+                // For WebSocket binary data
+                mediaByteSize = media.byteLength;
+            } else {
+                console.error('Unsupported media type for the NFT: ', typeof media);
+                return 'Unsupported media type for the NFT';
+            }
+        } else {
+            console.error('No media file is provided for the NFT');
+            return 'No media file is provided for the NFT';
+        }
 
         return mediaByteSize + metadataByteSize;
     }
