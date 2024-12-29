@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { blockchainSymbols } from './types';
+import { blockchainFees, blockchainSymbols } from './types';
 import { NftMetadata } from './interfaces';
 import { SolanaService } from 'src/solana/solana/solana.service';
 import { AppService } from 'src/app.service';
@@ -21,42 +21,46 @@ export class JobProcessor {
     wsClientEmitError: (errorMessage: any) => void, 
     data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
   ) {
+    // Try to calculate the NFT mint fees, according to the metadata size
+    let mintFees: blockchainFees;
     try {
       const metadataByteSize = this.helperSrv.calcNftMetadataByteSize(data.NftMetadata);
-      if (typeof metadataByteSize === 'string') {
-        wsClientEmitError({id: 0, errorMessage: metadataByteSize});
-        return;
+      if (typeof metadataByteSize === 'string') throw new Error(metadataByteSize);
+      mintFees = await this.appSrv.getMintFees("NFT", [data.bChainSymbol], metadataByteSize);
+    } catch (error) {
+      // Redirect the payment if some error occurs
+      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature);
+      if (!redirect.isValid) {
+        wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the NFT minting fees so your payment was redirected after deducting the estimated refund fee. Please try again.'});
+      } else {
+        wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the NFT minting fees. Your payment was redirected but failed: "' + redirect.message + '". Please try again.'});
       }
+      console.error('Failed to calculate NFT mint fees:', error);
+      return;
+    }
 
-      if (data.bChainSymbol === 'SOL') {
-
+    // Spread the logic by blockchains
+    if (data.bChainSymbol === 'SOL') {
+      try {
         // ------------------ Payment transaction validation ------------------
-        // Validate the payment transaction
-        const mintFees = await this.appSrv.getMintFees("NFT", ["SOL"], metadataByteSize);
         const validation = await this.solanaService.validateSolPaymentTx(data.paymentTxSignature, mintFees.SOL);
         if (!validation.isValid) {
           wsClientEmitError({id: 0, errorMessage: validation.errorMessage});
           return;
         }
-        // Notify the client that the payment transaction is valid
         wsClientEmit({id: 0, txId: null});
         // ------------------ Payment transaction validation ------------------
 
+        // TODO - Upload metadata to IPFS and mint the NFT...
 
-        // TODO - Upload metadata to IPFS and mint the NFT
-
-
-
-
-      } else {
-        // TODO - Add other blockchains logic here for NFT minting
-        wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for NFT minting. Please use a different blockchain'});
+      } catch (error) {
+        console.error('SolanaNFT minting job failed:', error);
+        wsClientEmitError({id: -1, errorMessage: 'Solana NFT minting failed. Please try again.'});
+        return;
       }
-    } catch (error) {
-      console.error('NFT minting job failed:', error);
-      wsClientEmitError({id: -1, errorMessage: 'NFT minting failed. Please try again.'});
-      // TODO - Think about it, bc maybe i need to refund the user!!! (Payment validation handle this, so i dont need to do it here)
-      throw error;
+    } else {
+      // TODO - Add support for other blockchains later
+      wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for NFT minting. Please use a different blockchain'});
     }
   }
 }

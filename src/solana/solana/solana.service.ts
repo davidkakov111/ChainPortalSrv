@@ -163,6 +163,8 @@ export class SolanaService {
         refunded: boolean;
         message: string;
     }> {
+        // TODO - Check if the payment was already redirected or processed or something!
+
         // Get Chain Portal's solana private key from environment variables
         const envSenderPkKey = this.cliEnv.blockchainNetworks.solana.selected === "devnet" ? 'solanaDevBase58PrivateKey' : 'solanaBase58PrivateKey';
         const chainPortalPrivateKey = this.configSrv.get<string>(envSenderPkKey);
@@ -181,29 +183,33 @@ export class SolanaService {
         }
     }
 
+    // Redirect payment if it is enough for the refund fee
+    async redirectSolPayment(paymentTxSignature: string): Promise<{isValid: boolean, message?: string}> {
+        // TODO - Check if the payment was already redirected or processed or something!
+
+        // Get transfer instruction by transaction signature
+        const txDetails = await this.getSenderPubKeyAndOurBallanceChange(paymentTxSignature);
+        if (!txDetails.isValid) return {isValid: false, message: txDetails.errorMessage};
+        const {senderPubkey, recipientBalanceChange} = txDetails;
+
+        // Redirect the payment if it is enough for the refund fee
+        const estimatedRefundFee = 5500;
+        if (recipientBalanceChange > estimatedRefundFee) {
+            // This function also deducts the estimated refund fee
+            const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChange / LAMPORTS_PER_SOL), paymentTxSignature);
+            return {isValid: refundObj.refunded, message: refundObj.message};
+        } else {
+            console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund:', paymentTxSignature);
+            return {isValid: false, message: "Your transaction did not transfer SOL. Please try again."};
+        }
+    }
+
     // Validate payment transaction by transaction signature
     async validateSolPaymentTx(paymentTxSignature: string, requiredSolPaymentAmount: number): Promise<{isValid: boolean, errorMessage?: string}> {
         // Get transfer instruction by transaction signature
-        const transferIx = await this.transferIxByTxSignature(paymentTxSignature);
-        if (!transferIx.isValid) return {isValid: false, errorMessage: transferIx.errorMessage};
-        const {transferInstruction, accountKeys, meta} = transferIx.data;
-
-        // Get sender and recipient from account indices in the transfer instruction
-        const senderPubkey = accountKeys[transferInstruction.accountKeyIndexes[0]];
-        const recipientPubkey = accountKeys[transferInstruction.accountKeyIndexes[1]];
-
-        // Get Chain Portal's public key from environment variables // TODO - Make it dynamic, dont use hardcoded pubkey, calculate it from the private key
-        const ChainPortalPubKey = this.cliEnv.blockchainNetworks.solana.pubKey;
-        
-        // Check if the transaction was sent to Chain Portal's public key
-        if (recipientPubkey.toString() !== ChainPortalPubKey) {
-            console.error('The users transaction ('+ paymentTxSignature +') was not sent to Chain Portal\'s public key: ', recipientPubkey);
-            return {isValid: false, errorMessage: "Your transaction was not sent to Chain Portal's public key. Please try again."};
-        };
-
-        // Calculate recipient's balance change
-        const recipientIndex = accountKeys.indexOf(recipientPubkey);
-        const recipientBalanceChange = meta.postBalances[recipientIndex] - meta.preBalances[recipientIndex];
+        const txDetails = await this.getSenderPubKeyAndOurBallanceChange(paymentTxSignature);
+        if (!txDetails.isValid) return {isValid: false, errorMessage: txDetails.errorMessage};
+        const {senderPubkey, recipientBalanceChange} = txDetails;
 
         // Refund the user, bc coudnt calculate the total price for their NFT minting
         if (!requiredSolPaymentAmount) {
@@ -236,5 +242,42 @@ export class SolanaService {
         }
 
         return {isValid: true};
+    }
+
+    // Get sender pubkey and Chain Portal's balance change from a transaction by transaction signature
+    async getSenderPubKeyAndOurBallanceChange(paymentTxSignature: string): Promise<{
+        isValid: boolean;
+        errorMessage: string;
+        senderPubkey?: undefined;
+        recipientBalanceChange?: undefined;
+    } | {
+        isValid: boolean;
+        senderPubkey: PublicKey;
+        recipientBalanceChange: number;
+        errorMessage?: undefined;
+    }> {
+        // Get transfer instruction by transaction signature
+        const transferIx = await this.transferIxByTxSignature(paymentTxSignature);
+        if (!transferIx.isValid) return {isValid: false, errorMessage: transferIx.errorMessage};
+        const {transferInstruction, accountKeys, meta} = transferIx.data;
+
+        // Get sender and recipient from account indices in the transfer instruction
+        const senderPubkey = accountKeys[transferInstruction.accountKeyIndexes[0]];
+        const recipientPubkey = accountKeys[transferInstruction.accountKeyIndexes[1]];
+
+        // Get Chain Portal's public key from environment variables // TODO - Make it dynamic, dont use hardcoded pubkey, calculate it from the private key
+        const ChainPortalPubKey = this.cliEnv.blockchainNetworks.solana.pubKey;
+        
+        // Check if the transaction was sent to Chain Portal's public key
+        if (recipientPubkey.toString() !== ChainPortalPubKey) {
+            console.error('The users transaction ('+ paymentTxSignature +') was not sent to Chain Portal\'s public key: ', recipientPubkey);
+            return {isValid: false, errorMessage: "Your transaction was not sent to Chain Portal's public key. Please try again."};
+        };
+
+        // Calculate recipient's balance change
+        const recipientIndex = accountKeys.indexOf(recipientPubkey);
+        const recipientBalanceChange = meta.postBalances[recipientIndex] - meta.preBalances[recipientIndex];
+
+        return {isValid: true, senderPubkey, recipientBalanceChange}
     }
 }
