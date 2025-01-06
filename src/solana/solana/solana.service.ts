@@ -174,8 +174,6 @@ export class SolanaService {
         refunded: boolean;
         message: string;
     }> {
-        // TODO - Check if the payment was already redirected or processed or something!
-
         // Get Chain Portal's solana private key from environment variables
         const envSenderPkKey = this.cliEnv.blockchainNetworks.solana.selected === "devnet" ? 'solanaDevBase58PrivateKey' : 'solanaBase58PrivateKey';
         const chainPortalPrivateKey = this.configSrv.get<string>(envSenderPkKey);
@@ -196,8 +194,6 @@ export class SolanaService {
 
     // Redirect payment if it is enough for the refund fee
     async redirectSolPayment(paymentTxSignature: string): Promise<{isValid: boolean, message?: string}> {
-        // TODO - Check if the payment was already redirected or processed or something!
-
         // Get transfer instruction by transaction signature
         const txDetails = await this.getSenderPubKeyAndOurBallanceChange(paymentTxSignature);
         if (!txDetails.isValid) return {isValid: false, message: txDetails.errorMessage};

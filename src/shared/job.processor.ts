@@ -81,7 +81,7 @@ export class JobProcessor {
     }
   }
 
-  // Return NFT mint fees and if coudn't calculate it, return ws response
+  // Return NFT mint fees, if coudn't calculate it, refund and return ws response
   async wsJobProcessorNftMintFeesCalculator(
     wsClientEmitError: (errorMessage: any) => void,
     data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
