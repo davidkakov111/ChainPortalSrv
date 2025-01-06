@@ -24,6 +24,14 @@ export class SolanaService {
         try {
             // First check if transaction is already confirmed
             const status = await this.connection.getSignatureStatus(txSignature);
+            
+            // If status is null, transaction is too old or doesn't exist
+            if (!status?.value) {
+                // For old transactions, try to get the transaction details directly, if have it is confirmed
+                const tx = await this.getTransactionDetails(txSignature);
+                if (tx) return true;
+            }
+
             const confirmationLevels = ['processed', 'confirmed', 'finalized'];
             const statusIndex = confirmationLevels.indexOf(status.value?.confirmationStatus);
             const requestedIndex = confirmationLevels.indexOf(confirmationLevel);
@@ -55,7 +63,6 @@ export class SolanaService {
                 maxSupportedTransactionVersion: 0,
             });
             if (!transaction) {
-                console.error('Transaction not found');
                 return null;
             }
 
@@ -149,7 +156,11 @@ export class SolanaService {
         // Find the SOL transfer instruction by checking program ID
         const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111';
         const transferInstruction = txDetails.transaction.message.compiledInstructions.find(
-            (ix) => accountKeys[ix.programIdIndex].toString() === SYSTEM_PROGRAM_ID && ix.data.toString().startsWith('02')
+            (ix) => accountKeys[ix.programIdIndex].toString() === SYSTEM_PROGRAM_ID && 
+                // Check for transfer instruction (0x02)
+                Buffer.from(ix.data).readUInt8(0) === 2 &&
+                // Ensure have account indexes for sender and recipient
+                ix.accountKeyIndexes.length === 2
         );
         if (!transferInstruction) {
             return {isValid: false, errorMessage: "Could not find SOL transfer instruction in your transaction, it seems like the transaction is not a valid SOL transfer. Please try again."};
@@ -218,12 +229,12 @@ export class SolanaService {
                 // This function also deducts the estimated refund fee
                 const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChange / LAMPORTS_PER_SOL), paymentTxSignature);
                 if (refundObj.refunded) {
-                    return {isValid: false, errorMessage: 'Unable to calculate the total price for your NFT minting so your transaction amount was refunded after deducting the estimated refund fee. Please try again.'};
+                    return {isValid: false, errorMessage: 'Unable to calculate the total price for your operation so your transaction amount was refunded after deducting the estimated refund fee. Please try again.'};
                 } else {
-                    return {isValid: false, errorMessage: 'Unable to calculate the total price for your NFT minting and your refund failed. Please try again.'};
+                    return {isValid: false, errorMessage: 'Unable to calculate the total price for your operation and your refund failed. Please try again.'};
                 }
             } else {
-                console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund. I also coudn\'t calculate the total price for their NFT minting. Expected: ', requiredSolPaymentAmount, 'Received: ', recipientBalanceChange / LAMPORTS_PER_SOL);
+                console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund. I also coudn\'t calculate the total price for their operation. Expected: ', requiredSolPaymentAmount, 'Received: ', recipientBalanceChange / LAMPORTS_PER_SOL);
                 return {isValid: false, errorMessage: "Your transaction did not transfer SOL. Please try again."};
             }
         }

@@ -85,4 +85,57 @@ export class PrismaService
       },
     });
   }
+
+  // Save mint transaction history
+  async saveMintTxHistory(params: {
+    assetType: assetType,
+    blockchain: blockchainSymbols,
+    paymentPubKey: string,
+    paymentAmount: number,
+    expenseAmount: number,
+    paymentTxSignature: string,
+    rewardTxs: { txSignature: string, type: string }[]
+  }) {
+    // Use transaction to ensure both operations succeed or fail together
+    return await this.$transaction(async (tx) => {
+      // 1. Create main transaction record
+      const mainTx = await tx.mainTxHistory.create({
+        data: {
+          operationType: 'mint',
+          assetType: params.assetType,
+          blockchain: params.blockchain,
+          paymentPubKey: params.paymentPubKey,
+          paymentAmount: params.paymentAmount,
+          expenseAmount: params.expenseAmount,
+        },
+      });
+
+      // 2. Create mint transaction record
+      const mintTx = await tx.mintTxHistory.create({
+        data: {
+          mainTxHistoryId: mainTx.id,
+          paymentTxSignature: params.paymentTxSignature,
+          rewardTxs: params.rewardTxs,
+        },
+      });
+
+      return { mainTx, mintTx };
+    });
+  }
+
+  // Check if transaction signature exists in any relevant table
+  async isTransactionSignatureUsed(txSignature: string): Promise<boolean> { // TODO - test it!
+    // Check MintTxHistory table
+    const mintTxExists = await this.mintTxHistory.findUnique({
+      where: {paymentTxSignature: txSignature}
+    });
+
+    // TODO - add additional table checks later when implemented like bridgeTxHistory
+    // const bridgeTxExists = await this.bridgeTxHistory.findUnique({
+    //   where: {paymentTxSignature: txSignature},
+    // });
+    
+    // Return true if found in any table
+    return !!mintTxExists; // || !!bridgeTxExists
+  }
 }
