@@ -9,6 +9,6 @@ import { SolanaService } from './solana/solana.service';
     imports: [],
     controllers: [],
     providers: [SolanaFeesService, MetaplexService, SolanaHelpersService, SolanaNftService, SolanaService],
-    exports: [SolanaFeesService, MetaplexService, SolanaNftService, SolanaService], 
+    exports: [SolanaFeesService, MetaplexService, SolanaNftService, SolanaService, SolanaHelpersService], 
 })
 export class SolanaModule {}
