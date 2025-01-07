@@ -7,6 +7,7 @@ import { SolanaFeesService } from './solana/solana-fees/solana-fees.service';
 import { MetaplexService } from './solana/metaplex/metaplex.service';
 import { HelperService } from './shared/helper/helper/helper.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { SolanaHelpersService } from './solana/solana-helpers/solana-helpers.service';
 
 @Injectable()
 export class AppService {
@@ -15,13 +16,22 @@ export class AppService {
     private readonly prismaSrv: PrismaService,
     private readonly solanaFeesSrv: SolanaFeesService,
     private readonly metaplexSrv: MetaplexService,
-    private readonly helperSrv: HelperService
+    private readonly helperSrv: HelperService,
+    private readonly solHelpersSrv: SolanaHelpersService
   ) {}
 
   // Return client environment variables
-  getCliEnv(): cliEnv {
+  getCliEnv(): any {
     const strCliEnv = this.configSrv.get<string>('cli_environment');
-    return JSON.parse(strCliEnv) as cliEnv;
+    const cliEnv = JSON.parse(strCliEnv);
+    
+    // Attach Chainportal pubkeys to the client environemnt variables 
+    const solPubkey = this.solHelpersSrv.getChainPortalKeypair(null, cliEnv as cliEnv).publicKey;
+    cliEnv.blockchainNetworks.solana.pubKey = solPubkey;
+
+    // TODO - Attach another suported blockchain pubkeys later
+
+    return cliEnv;
   }
 
   // Return  mint fees based on blockchain and asset type

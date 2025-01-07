@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Connection, ConfirmOptions, TransactionSignature, clusterApiUrl, VersionedTransactionResponse, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair, MessageCompiledInstruction, ConfirmedTransactionMeta } from '@solana/web3.js';
 import { cliEnv } from 'src/shared/interfaces';
-import bs58 from 'bs58';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { assetType } from 'src/shared/types';
+import { SolanaHelpersService } from '../solana-helpers/solana-helpers.service';
 
 @Injectable()
 export class SolanaService {
@@ -14,7 +14,8 @@ export class SolanaService {
 
     constructor(
         private readonly configSrv: ConfigService,
-        private readonly prismaSrv: PrismaService
+        private readonly prismaSrv: PrismaService,
+        private readonly solHelpersSrv: SolanaHelpersService
     ) {
         // Initialize connection to the Solana cluster
         const strCliEnv = this.configSrv.get<string>('cli_environment');
@@ -86,9 +87,7 @@ export class SolanaService {
         solAmount: number
     ): Promise<{ success: boolean; signature?: string; error?: string }> {
         try {
-            // Convert the base58 private key to Keypair
-            const privateKeyBytes = bs58.decode(base58PrivateKey);
-            const fromWallet = Keypair.fromSecretKey(privateKeyBytes);
+            const fromWallet = this.solHelpersSrv.getChainPortalKeypair(base58PrivateKey);
             
             // Convert destination address string to PublicKey
             const toWallet = new PublicKey(pubKey);
@@ -302,11 +301,11 @@ export class SolanaService {
         const senderPubkey = accountKeys[transferInstruction.accountKeyIndexes[0]];
         const recipientPubkey = accountKeys[transferInstruction.accountKeyIndexes[1]];
 
-        // Get Chain Portal's public key from environment variables // TODO - Make it dynamic, dont use hardcoded pubkey, calculate it from the private key
-        const ChainPortalPubKey = this.cliEnv.blockchainNetworks.solana.pubKey;
-        
+        // Get Chain Portal's public key
+        const ChainPortalPubKey = this.solHelpersSrv.getChainPortalKeypair(null, this.cliEnv).publicKey;
+
         // Check if the transaction was sent to Chain Portal's public key
-        if (recipientPubkey.toString() !== ChainPortalPubKey) {
+        if (recipientPubkey !== ChainPortalPubKey) {
             console.error('The users transaction ('+ paymentTxSignature +') was not sent to Chain Portal\'s public key: ', recipientPubkey);
             return {isValid: false, errorMessage: "Your transaction was not sent to Chain Portal's public key. Please try again."};
         };
@@ -325,8 +324,8 @@ export class SolanaService {
         const txDetails = await this.getTransactionDetails(txSignature);
 
         if (txDetails?.meta) {
-            // Get Chain Portal's public key from environment variables // TODO - Make it dynamic, dont use hardcoded pubkey, calculate it from the private key
-            const ChainPortalPubKey = new PublicKey(this.cliEnv.blockchainNetworks.solana.pubKey);
+            // Get Chain Portal's public key
+            const ChainPortalPubKey = this.solHelpersSrv.getChainPortalKeypair(null, this.cliEnv).publicKey;
 
             const chainPortalIndex = txDetails.transaction.message.staticAccountKeys.findIndex(
                 key => key.equals(ChainPortalPubKey)

@@ -1,33 +1,28 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Connection, LAMPORTS_PER_SOL, clusterApiUrl } from '@solana/web3.js';
 import { Metaplex, keypairIdentity } from '@metaplex-foundation/js';
-import { Keypair } from '@solana/web3.js';
 import { ConfigService } from '@nestjs/config';
 import { cliEnv } from 'src/shared/interfaces';
-import bs58 from 'bs58';
 import { BN } from 'bn.js';
+import { SolanaHelpersService } from '../solana-helpers/solana-helpers.service';
 
 @Injectable()
 export class MetaplexService {
     private connection: Connection;
     private metaplex: Metaplex;
 
-    constructor(private readonly configSrv: ConfigService) {
+    constructor(
+        private readonly configSrv: ConfigService,
+        private readonly solHelpersSrv: SolanaHelpersService
+    ) {
         const strCliEnv = this.configSrv.get<string>('cli_environment');
         const cliEnv = JSON.parse(strCliEnv) as cliEnv;
 
         // Initialize connection to the Solana cluster
         this.connection = new Connection(clusterApiUrl(cliEnv.blockchainNetworks.solana.selected === 'devnet' ? 'devnet' : 'mainnet-beta'));
 
-        // Get the private key
-        const base58PrivateKey = this.configSrv.get<string>(
-            cliEnv.blockchainNetworks.solana.selected === 'devnet' ? 'solanaDevBase58PrivateKey' : 'solanaBase58PrivateKey'
-        );
-        
-        // Keypair identity for Metaplex
-        const keypair = Keypair.fromSecretKey(bs58.decode(base58PrivateKey));
-
-        // Initialize Metaplex
+        // Keypair identity for Metaplex to initialize it
+        const keypair = this.solHelpersSrv.getChainPortalKeypair(null, cliEnv);
         this.metaplex = Metaplex.make(this.connection).use(keypairIdentity(keypair));
     }
 

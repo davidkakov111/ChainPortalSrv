@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { assetType, blockchainFees, blockchainSymbols } from './shared/types';
-import { cliEnv, transaction } from './shared/interfaces';
+import { transaction } from './shared/interfaces';
 
 @Controller()
 export class AppController {
@@ -9,7 +9,7 @@ export class AppController {
 
   // Return the client environment //ex.: http://localhost:3000/cli-env
   @Get('cli-env')
-  getCliEnv(): cliEnv {
+  getCliEnv(): any {
     return this.appSrv.getCliEnv();
   }
 
