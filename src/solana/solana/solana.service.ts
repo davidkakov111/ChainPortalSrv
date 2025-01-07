@@ -305,7 +305,7 @@ export class SolanaService {
         const ChainPortalPubKey = this.solHelpersSrv.getChainPortalKeypair(null, this.cliEnv).publicKey;
 
         // Check if the transaction was sent to Chain Portal's public key
-        if (recipientPubkey !== ChainPortalPubKey) {
+        if (recipientPubkey.toString() !== ChainPortalPubKey.toString()) {
             console.error('The users transaction ('+ paymentTxSignature +') was not sent to Chain Portal\'s public key: ', recipientPubkey);
             return {isValid: false, errorMessage: "Your transaction was not sent to Chain Portal's public key. Please try again."};
         };
