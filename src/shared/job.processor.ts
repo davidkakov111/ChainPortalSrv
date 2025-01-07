@@ -35,7 +35,7 @@ export class JobProcessor {
     if (data.bChainSymbol === 'SOL') {
       try {
         // ------------------ Payment transaction validation ------------------
-        const validation = await this.solanaService.validateSolPaymentTx(data.paymentTxSignature, mintFees.SOL);
+        const validation = await this.solanaService.validateSolPaymentTx(data.paymentTxSignature, mintFees.SOL, 'NFT');
         if (!validation.isValid) {
           wsClientEmitError({id: 0, errorMessage: validation.errorMessage});
           return;
@@ -93,7 +93,7 @@ export class JobProcessor {
       return mintFees;
     } catch (error) {
       // Redirect the payment if some error occurs
-      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature);
+      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'NFT');
       if (redirect.isValid) {
         wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the NFT minting fees so your payment was redirected after deducting the estimated refund fee. Please try again.'});
       } else {

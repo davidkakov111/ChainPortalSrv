@@ -124,7 +124,7 @@ export class PrismaService
   }
 
   // Check if transaction signature exists in any relevant table
-  async isTransactionSignatureUsed(txSignature: string): Promise<boolean> { // TODO - test it!
+  async isTransactionSignatureUsed(txSignature: string): Promise<boolean> {
     // Check MintTxHistory table
     const mintTxExists = await this.mintTxHistory.findUnique({
       where: {paymentTxSignature: txSignature}
