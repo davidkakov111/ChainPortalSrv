@@ -33,7 +33,8 @@ export interface transaction {
 export interface NftMetadata {
   title: string;                         // Title of the NFT
   description: string;                   // Description of the NFT
-  media: File | null;                    // Media file (can be an image, video, etc.)
+  media: Uint8Array | null;              // Media file (can be an image, video, etc.)
+  mediaName: string;                     // Media file name
   attributes: Array<Attribute>;          // Array of attributes for the NFT
   creator?: string;                      // Optional creator information
   isLimitedEdition: boolean;             // Checkbox for limited edition

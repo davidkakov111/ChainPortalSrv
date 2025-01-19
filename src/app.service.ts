@@ -57,22 +57,20 @@ export class AppService {
       if (i === "SOL") {
         // Basic fees without metadata upload fees
         result.SOL = await this.solanaFeesSrv.calculateFees("mint", assetType);
-
-        // ChainPortal fees
-        if (assetType === "NFT") {
-          result.SOL += parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
-        } else if (assetType === "Token") {
-          result.SOL += parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
-        }
-        
         await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);        
       } // TODO - Need to add options for another suported bchains later
     }
 
-    // Calculate & assign the metadata upload costs
+    // Calculate & assign the metadata upload costs with ChainPortal fees
     if (result.SOL) {
       const metadataUploadFee = await this.metaplexSrv.calcArweaveMetadataUploadFee(metadataByteSize);
       result.SOL += metadataUploadFee;
+
+      if (assetType === "NFT") {
+        result.SOL += parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
+      } else if (assetType === "Token") {
+        result.SOL += parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
+      }
     } // TODO - Need to add options for another suported bchains later
 
     // Round up the fees to 4 decimals

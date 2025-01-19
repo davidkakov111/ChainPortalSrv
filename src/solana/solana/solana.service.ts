@@ -213,11 +213,11 @@ export class SolanaService {
                 rewardTxs: [{txSignature: refundObj.signature, type: 'refund'}]
             });
 
-            console.error('The user\'s transaction ('+ insuficientPaymentTxSignature +') did not transfer enough SOL, and their refund was successful: ', refundObj.signature);
-            return {refunded: true, message: "Your transaction did not transfer enough SOL, so your transaction amount was refunded after deducting the estimated refund fee. Please try again."};
+            console.error('Refund of the user\'s transaction ('+ insuficientPaymentTxSignature +') was successful: ', refundObj.signature);
+            return {refunded: true, message: "Your transaction amount was refunded after deducting the estimated refund fee. Please try again."};
         } else {
-            console.error('The user\'s transaction ('+ insuficientPaymentTxSignature +') did not transfer enough SOL, and their refund failed: ', refundObj.error);
-            return {refunded: false, message: "Your transaction did not transfer enough SOL and your refund failed. Please try again."};
+            console.error('Refund of the user\'s transaction ('+ insuficientPaymentTxSignature +') failed: ', refundObj.error);
+            return {refunded: false, message: "Your refund failed. Please try again."};
         }
     }
 

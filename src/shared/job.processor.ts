@@ -5,6 +5,7 @@ import { SolanaService } from 'src/solana/solana/solana.service';
 import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
+import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -15,6 +16,7 @@ export class JobProcessor {
     private readonly helperSrv: HelperService,
     private readonly solanaService: SolanaService,
     private readonly prismaService: PrismaService,
+    private readonly metaplexSrv: MetaplexService,
   ) {}
 
   // NFT minting job
@@ -36,23 +38,19 @@ export class JobProcessor {
       try {
         // ------------------ Payment transaction validation ------------------
         const validation = await this.solanaService.validateSolPaymentTx(data.paymentTxSignature, mintFees.SOL, 'NFT');
-        if (!validation.isValid) {
-          wsClientEmitError({id: 0, errorMessage: validation.errorMessage});
-          return;
-        }
+        if (!validation.isValid) {wsClientEmitError({id: 0, errorMessage: validation.errorMessage}); return;}
         wsClientEmit({id: 0, txId: null});
         // ------------------ Payment transaction validation ------------------
 
-
-
-
-        // TODO - Upload metadata to IPFS and mint the NFT...
-
-
-
-
-
-
+        // ------------------ Metadata upload ---------------------------------
+        const metadataUploadResult = await this.metaplexSrv.uploadNFTMetadataToArweave(data.NftMetadata);
+        if (!metadataUploadResult.successful) {wsClientEmitError({id: 1, errorMessage: metadataUploadResult.uri}); return;}
+        wsClientEmit({id: 1, txId: null});
+        // ------------------ Metadata upload ---------------------------------
+     
+        // ------------------ Mint the NFT ------------------------------------
+        // TODO
+        // ------------------ Mint the NFT ------------------------------------
       } catch (error) {
         console.error('SolanaNFT minting job failed:', error);
         wsClientEmitError({id: -1, errorMessage: 'Solana NFT minting failed. Please try again.'});
