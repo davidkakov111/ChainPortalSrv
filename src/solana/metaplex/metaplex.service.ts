@@ -76,7 +76,7 @@ export class MetaplexService {
             name: metadataObject.title,           
             description: metadataObject.description,
             image: fileUploadResult.fileUri, 
-            ...(metadataObject.attributes.length && { attributes: JSON.parse(JSON.stringify(metadataObject.attributes)) }),
+            ...(metadataObject.attributes.length && { attributes: metadataObject.attributes.map(({ type, value }) => ({trait_type: type, value}))}),
             ...(metadataObject.creator && { creator: metadataObject.creator }),
             ...(metadataObject.isLimitedEdition && { isLimitedEdition: metadataObject.isLimitedEdition }),
             ...(metadataObject.totalEditions && { totalEditions: metadataObject.totalEditions }),
@@ -84,7 +84,7 @@ export class MetaplexService {
             ...(metadataObject.royalty && { royalty: metadataObject.royalty }),
             ...(metadataObject.tags.length && { tags: metadataObject.tags }),
             ...(metadataObject.license && { license: metadataObject.license }),
-            ...(metadataObject.externalLink && { externalLink: metadataObject.externalLink }),
+            ...(metadataObject.externalLink && { external_url: metadataObject.externalLink }),
             ...(metadataObject.creationTimestampToggle && { creationTimestamp: metadataObject.creationTimestamp }),
         });
         return {successful: metadataUploadResult.successful, uri: metadataUploadResult.metadataUri};
