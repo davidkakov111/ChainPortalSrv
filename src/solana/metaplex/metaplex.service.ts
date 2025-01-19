@@ -76,6 +76,7 @@ export class MetaplexService {
             name: metadataObject.title,           
             description: metadataObject.description,
             image: fileUploadResult.fileUri, 
+            ...(metadataObject.symbol && { symbol: metadataObject.symbol }),
             ...(metadataObject.attributes.length && { attributes: metadataObject.attributes.map(({ type, value }) => ({trait_type: type, value}))}),
             ...(metadataObject.creator && { creator: metadataObject.creator }),
             ...(metadataObject.isLimitedEdition && { isLimitedEdition: metadataObject.isLimitedEdition }),

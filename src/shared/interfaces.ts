@@ -35,6 +35,7 @@ export interface NftMetadata {
   description: string;                   // Description of the NFT
   media: Uint8Array | null;              // Media file (can be an image, video, etc.)
   mediaName: string;                     // Media file name
+  symbol: string;                        // Symbol of the NFT
   attributes: Array<Attribute>;          // Array of attributes for the NFT
   creator?: string;                      // Optional creator information
   isLimitedEdition: boolean;             // Checkbox for limited edition
