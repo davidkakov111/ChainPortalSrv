@@ -17,13 +17,22 @@ export class HelperService {
         const metadataByteSize = new Blob([JSON.stringify(metaObj)]).size; 
 
         // Media file size in bytes
+        let mediaByteSize = this.calcNftMediaByteSize(media);
+        if (typeof mediaByteSize === 'string') return mediaByteSize;
+        
+        return mediaByteSize + metadataByteSize;
+    }
+
+    // Calculate the size in bytes of an Unit8Array media file 
+    calcNftMediaByteSize(mediaFile: Uint8Array): number | string {
+        // Media file size in bytes
         let mediaByteSize = 0;
-        if (media) {
-            if (media instanceof Uint8Array) {
+        if (mediaFile) {
+            if (mediaFile instanceof Uint8Array) {
                 // For WebSocket binary data
-                mediaByteSize = media.byteLength;
+                mediaByteSize = mediaFile.byteLength;
             } else {
-                console.error('Unsupported media type for the NFT: ', typeof media);
+                console.error('Unsupported media type for the NFT: ', typeof mediaFile);
                 return 'Unsupported media type for the NFT';
             }
         } else {
@@ -31,6 +40,6 @@ export class HelperService {
             return 'No media file is provided for the NFT';
         }
 
-        return mediaByteSize + metadataByteSize;
+        return mediaByteSize;
     }
 }

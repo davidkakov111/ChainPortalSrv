@@ -222,21 +222,29 @@ export class SolanaService {
     }
 
     // Redirect payment if it is enough for the refund fee
-    async redirectSolPayment(paymentTxSignature: string, assetType: assetType): Promise<{isValid: boolean, message?: string}> {
-        // Get transfer instruction by transaction signature
-        const txDetails = await this.getSenderPubKeyAndOurBallanceChange(paymentTxSignature);
-        if (!txDetails.isValid) return {isValid: false, message: txDetails.errorMessage};
-        const {senderPubkey, recipientBalanceChange} = txDetails;
+    async redirectSolPayment(paymentTxSignature: string, assetType: assetType, needToDeductSol?: number): Promise<{isValid: boolean, message?: string}> {
+        try {
+            // Get transfer instruction by transaction signature
+            const txDetails = await this.getSenderPubKeyAndOurBallanceChange(paymentTxSignature);
+            if (!txDetails.isValid) return {isValid: false, message: txDetails.errorMessage};
+            const {senderPubkey, recipientBalanceChange} = txDetails;
+            
+            // Deduct optional sol amount (for metadata upload etc.)
+            const recipientBalanceChangeWithDeduct = needToDeductSol ? (recipientBalanceChange - (needToDeductSol * LAMPORTS_PER_SOL)) : recipientBalanceChange;
 
-        // Redirect the payment if it is enough for the refund fee
-        const estimatedRefundFee = this.defaultLamportTransactionFee;
-        if (recipientBalanceChange > estimatedRefundFee) {
-            // This function also deducts the estimated refund fee
-            const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChange / LAMPORTS_PER_SOL), paymentTxSignature, assetType);
-            return {isValid: refundObj.refunded, message: refundObj.message};
-        } else {
-            console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund:', paymentTxSignature);
-            return {isValid: false, message: "Your transaction did not transfer SOL. Please try again."};
+            // Redirect the payment if it is enough for the refund fee
+            const estimatedRefundFee = this.defaultLamportTransactionFee;
+            if (recipientBalanceChangeWithDeduct > estimatedRefundFee) {
+                // This function also deducts the estimated refund fee
+                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChangeWithDeduct / LAMPORTS_PER_SOL), paymentTxSignature, assetType);
+                return {isValid: refundObj.refunded, message: refundObj.message};
+            } else {
+                console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund (with deduction):', paymentTxSignature);
+                return {isValid: false, message: "Your transaction did not transfer enough SOL, even for refund. Please try again."};    
+            }
+        } catch (error) {
+            console.error(`Error in "redirectSolPayment": ${error}`);
+            return {isValid: false, message: "Your transaction was refunded after deducting the applicable fees, but it may have failed. Please try again."};    
         }
     }
 

@@ -42,8 +42,10 @@ export class JobProcessor {
         wsClientEmit({id: 0, txId: null});
         // ------------------ Payment transaction validation ------------------
 
+        // From this point evry redirect will only redirected after deducting the mintFees
+
         // ------------------ Metadata upload ---------------------------------
-        const metadataUploadResult = await this.metaplexSrv.uploadNFTMetadataToArweave(data.NftMetadata);
+        const metadataUploadResult = await this.metaplexSrv.uploadNFTMetadataToArweave(data.NftMetadata, 'NFT', mintFees.SOL, data.paymentTxSignature);
         if (!metadataUploadResult.successful) {wsClientEmitError({id: 1, errorMessage: metadataUploadResult.uri}); return;}
         wsClientEmit({id: 1, txId: null});
         // ------------------ Metadata upload ---------------------------------

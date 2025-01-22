@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { cliEnv, NftMetadata } from 'src/shared/interfaces';
 import { BN } from 'bn.js';
 import { SolanaHelpersService } from '../solana-helpers/solana-helpers.service';
+import { assetType } from 'src/shared/types';
+import { SolanaService } from '../solana/solana.service';
 
 @Injectable()
 export class MetaplexService {
@@ -13,7 +15,8 @@ export class MetaplexService {
 
     constructor(
         private readonly configSrv: ConfigService,
-        private readonly solHelpersSrv: SolanaHelpersService
+        private readonly solHelpersSrv: SolanaHelpersService,
+        private readonly solanaSrv: SolanaService,
     ) {
         const strCliEnv = this.configSrv.get<string>('cli_environment');
         const cliEnv = JSON.parse(strCliEnv) as cliEnv;
@@ -68,8 +71,8 @@ export class MetaplexService {
     }
 
     // Upload complete NFT metadata (file & metadata) to Arweave
-    async uploadNFTMetadataToArweave(metadataObject: NftMetadata): Promise<{successful: boolean, uri: string}> {
-        const fileUploadResult = await this.uploadMediaToArweave(metadataObject.media, metadataObject.mediaName);
+    async uploadNFTMetadataToArweave(metadataObject: NftMetadata, assetType: assetType, solMintFee: number, paymentTxSignature: string): Promise<{successful: boolean, uri: string}> {
+        const fileUploadResult = await this.uploadMediaToArweave(metadataObject.media, metadataObject.mediaName, assetType, solMintFee, paymentTxSignature);
         if (!fileUploadResult.successful) {return {successful: false, uri: fileUploadResult.fileUri}};
         
         const metadataUploadResult = await this.uploadMetadataObjToArweave({
@@ -87,31 +90,61 @@ export class MetaplexService {
             ...(metadataObject.license && { license: metadataObject.license }),
             ...(metadataObject.externalLink && { external_url: metadataObject.externalLink }),
             ...(metadataObject.creationTimestampToggle && { creationTimestamp: metadataObject.creationTimestamp }),
-        });
+        }, solMintFee, assetType, paymentTxSignature);
         return {successful: metadataUploadResult.successful, uri: metadataUploadResult.metadataUri};
     }
 
     // Upload unit 8 array type media file to arweave
-    async uploadMediaToArweave(media:  Uint8Array<ArrayBufferLike>, mediaName: string): Promise<{successful: boolean, fileUri: string}> {
+    async uploadMediaToArweave(media:  Uint8Array<ArrayBufferLike>, mediaName: string, assetType: assetType, solMintFee: number, paymentTxSignature: string): Promise<{successful: boolean, fileUri: string}> {
         try {
             // Convert the file to Metaplex format & upload the file to arweave
             const metaplexFile = toMetaplexFile(media, mediaName);
             const fileUri = await this.metaplex.storage().upload(metaplexFile);
+            if (!fileUri) {throw new Error("Uploaded file URI is missing, even though there was no error.")}
             return {successful: true, fileUri: fileUri};
         } catch (error) {
             console.error(`Error uploading media ${mediaName} file to arweave via metaplex: `, error);
-            return {successful: false, fileUri: `Error uploading media ${mediaName} file to arweave via metaplex`};
+
+            let feeWithoutChainPortalFee = solMintFee;
+            if (assetType === "NFT") {
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
+            } else if (assetType === "Token") {
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
+            }
+
+            // Redirect the payment after deducting potential fees
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, feeWithoutChainPortalFee);
+            if (redirect.isValid) {
+                return {successful: false, fileUri: `Unable to upload media file to Arweave so your payment was redirected after deducting the estimated fee(s). Please try again.`};
+            } else {
+                return {successful: false, fileUri: `Unable to upload media file to Arweave so your payment was redirected but maybe failed. Please try again.`};
+            }
         }
     }
 
     // Upload NFT metadata object to arweave
-    async uploadMetadataObjToArweave(metadata: any): Promise<{successful: boolean, metadataUri: string}> {
+    async uploadMetadataObjToArweave(metadata: any, solMintFee: number, assetType: assetType, paymentTxSignature: string): Promise<{successful: boolean, metadataUri: string}> {
         try {
             const { uri } = await this.metaplex.nfts().uploadMetadata(metadata);
+            if (!uri) {throw new Error("Uploaded metadata URI is missing, even though there was no error.")}
             return {successful: true, metadataUri: uri};
         } catch (error) {
             console.error(`Error uploading metadata (${JSON.stringify(metadata)}) to arweave via metaplex: `, error);
-            return {successful: false, metadataUri: `Error uploading metadata (${JSON.stringify(metadata)}) to arweave via metaplex`};
+
+            let feeWithoutChainPortalFee = solMintFee;
+            if (assetType === "NFT") {
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
+            } else if (assetType === "Token") {
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
+            }
+
+            // Redirect the payment after deducting potential fees
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, feeWithoutChainPortalFee);
+            if (redirect.isValid) {
+                return {successful: false, metadataUri: `Unable to upload metadata to Arweave so your payment was redirected after deducting the estimated fee(s). Please try again.`};
+            } else {
+                return {successful: false, metadataUri: `Unable to upload metadata to Arweave so your payment was redirected but maybe failed. Please try again.`};
+            }
         }
     }
 }
