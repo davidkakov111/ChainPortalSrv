@@ -175,7 +175,7 @@ export class SolanaService {
     }
 
     // Refund the user in SOL after deducting the estimated refund fee and save the transaction to the db
-    async refundInSOL(pubkey: PublicKey, solAmountWithFee: number, insuficientPaymentTxSignature: string, assetType: assetType): Promise<{
+    async refundInSOL(pubkey: PublicKey, solAmountWithFee: number, insuficientPaymentTxSignature: string, assetType: assetType, originalPaymnetSolAmount: number): Promise<{
         refunded: boolean;
         message: string;
     }> {
@@ -207,7 +207,7 @@ export class SolanaService {
                 assetType: assetType,
                 blockchain: 'SOL',
                 paymentPubKey: pubkey.toString(),
-                paymentAmount: solAmountWithFee,
+                paymentAmount: originalPaymnetSolAmount,
                 expenseAmount: expenseSolAmount,
                 paymentTxSignature: insuficientPaymentTxSignature,
                 rewardTxs: [{txSignature: refundObj.signature, type: 'refund'}]
@@ -247,7 +247,7 @@ export class SolanaService {
             const estimatedRefundFee = this.defaultLamportTransactionFee;
             if (recipientBalanceChangeWithDeduct > estimatedRefundFee) {
                 // This function also deducts the estimated refund fee
-                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChangeWithDeduct / LAMPORTS_PER_SOL), paymentTxSignature, assetType);
+                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChangeWithDeduct / LAMPORTS_PER_SOL), paymentTxSignature, assetType, (recipientBalanceChange / LAMPORTS_PER_SOL));
                 return {isValid: refundObj.refunded, message: refundObj.message};
             } else {
                 console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund (with deduction):', paymentTxSignature);
@@ -271,7 +271,7 @@ export class SolanaService {
             const estimatedRefundFee = this.defaultLamportTransactionFee;
             if (recipientBalanceChange > estimatedRefundFee) {
                 // This function also deducts the estimated refund fee
-                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChange / LAMPORTS_PER_SOL), paymentTxSignature, assetType);
+                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChange / LAMPORTS_PER_SOL), paymentTxSignature, assetType, (recipientBalanceChange / LAMPORTS_PER_SOL));
                 if (refundObj.refunded) {
                     return {isValid: false, errorMessage: 'Unable to calculate the total price for your operation so your transaction amount was refunded after deducting the estimated refund fee. Please try again.'};
                 } else {
@@ -288,7 +288,7 @@ export class SolanaService {
             const estimatedRefundFee = this.defaultLamportTransactionFee;
             if (recipientBalanceChange > estimatedRefundFee) {
                 // Refund the user, bc their transaction did not transfer enough SOL (this function also deducts the estimated refund fee)
-                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChange / LAMPORTS_PER_SOL), paymentTxSignature, assetType);
+                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChange / LAMPORTS_PER_SOL), paymentTxSignature, assetType, (recipientBalanceChange / LAMPORTS_PER_SOL));
                 return {isValid: false, errorMessage: refundObj.message};
             } else {
                 console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund. Expected: ', requiredSolPaymentAmount, 'Received: ', recipientBalanceChange / LAMPORTS_PER_SOL);
