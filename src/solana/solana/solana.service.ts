@@ -217,6 +217,17 @@ export class SolanaService {
             return {refunded: true, message: "Your transaction amount was refunded after deducting the estimated refund fee. Please try again."};
         } else {
             console.error('Refund of the user\'s transaction ('+ insuficientPaymentTxSignature +') failed: ', refundObj.error);
+
+            // Save the transaction to the db
+            this.prismaSrv.saveMintTxHistory({
+                assetType: assetType,
+                blockchain: 'SOL',
+                paymentPubKey: pubkey.toString(),
+                paymentAmount: solAmountWithFee,
+                expenseAmount: solAmountWithFee,
+                paymentTxSignature: insuficientPaymentTxSignature,
+                rewardTxs: [{txSignature: `Refund failed (the expense amount is unknown on the ChainPortal side), error: ${refundObj.error}`, type: 'refund'}]
+            });
             return {refunded: false, message: "Your refund failed. Please try again."};
         }
     }
