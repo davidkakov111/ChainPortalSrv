@@ -260,7 +260,7 @@ export class SolanaService {
     }
 
     // Validate payment transaction by transaction signature
-    async validateSolPaymentTx(paymentTxSignature: string, requiredSolPaymentAmount: number, assetType: assetType): Promise<{isValid: boolean, errorMessage?: string}> {
+    async validateSolPaymentTx(paymentTxSignature: string, requiredSolPaymentAmount: number, assetType: assetType): Promise<{isValid: boolean, errorMessage?: string, senderPubkey?: string, recipientBalanceChange?: number}> {
         // Get transfer instruction by transaction signature
         const txDetails = await this.getSenderPubKeyAndOurBallanceChange(paymentTxSignature);
         if (!txDetails.isValid) return {isValid: false, errorMessage: txDetails.errorMessage};
@@ -296,7 +296,7 @@ export class SolanaService {
             }
         }
 
-        return {isValid: true};
+        return {isValid: true, senderPubkey: String(senderPubkey), recipientBalanceChange: recipientBalanceChange};
     }
 
     // Get sender pubkey and Chain Portal's balance change from a transaction by transaction signature

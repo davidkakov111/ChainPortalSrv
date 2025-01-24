@@ -6,6 +6,7 @@ import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -51,7 +52,10 @@ export class JobProcessor {
         // ------------------ Metadata upload ---------------------------------
      
         // ------------------ Mint the NFT ------------------------------------
-        // TODO
+        const minted = await this.metaplexSrv.mintSolNFT(validation.senderPubkey, (validation.recipientBalanceChange / LAMPORTS_PER_SOL), metadataUploadResult.uri, 
+          {name: data.NftMetadata.title, symbol: data.NftMetadata.symbol, royalty: data.NftMetadata.royalty}, mintFees.SOL, data.paymentTxSignature);
+        if (!minted.successful) {wsClientEmitError({id: 2, errorMessage: minted.txId}); return;}
+        wsClientEmit({id: 2, txId: minted.txId});
         // ------------------ Mint the NFT ------------------------------------
       } catch (error) {
         console.error('SolanaNFT minting job failed:', error);
