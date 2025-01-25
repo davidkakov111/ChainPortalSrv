@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Connection, LAMPORTS_PER_SOL, PublicKey, clusterApiUrl } from '@solana/web3.js';
-import { Metaplex, keypairIdentity, irysStorage, toMetaplexFile, toBigNumber } from '@metaplex-foundation/js';
+import { Metaplex, keypairIdentity, irysStorage, toMetaplexFile, toBigNumber, AccountNotFoundError } from '@metaplex-foundation/js';
 import { ConfigService } from '@nestjs/config';
 import { cliEnv, NftMetadata } from 'src/shared/interfaces';
 import { BN } from 'bn.js';
@@ -180,6 +180,29 @@ export class MetaplexService {
             // Return the mint transaction db history id
             return {successful: true, txId: mintTxHistory.mainTx.id};
         } catch (error) {
+            // This is an internal sdk error without real effect (This sdk is deprecated)
+            if (error instanceof AccountNotFoundError) {
+                const errorMessage = error.message;
+
+                // Extract the value between '[' and ']'
+                const parts = errorMessage.split('[');
+                const lastPart = parts[parts.length - 1];
+                const nftaddress = lastPart.split(']')[0];
+                if (nftaddress) {
+                    // Save the transaction to the db, bc it was successful
+                    const mintTxHistory = await this.prismaSrv.saveMintTxHistory({
+                        assetType: 'NFT',
+                        blockchain: 'SOL',
+                        paymentPubKey: toPubkey,
+                        paymentAmount: solPaymentAmount,
+                        expenseAmount: solMintFee - parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE')),// TODO - Need to calculate this also and evrwhere where i save data to db
+                        paymentTxSignature: paymentTxSignature,
+                        rewardTxs: [{txSignature: `Signature is unkown, but here is the solana NFT address: ${nftaddress}`, type: 'mint'}]
+                    });
+                    return {successful: true, txId: mintTxHistory.mainTx.id};
+                }
+            }
+
             console.error(`Error minting NFT on Solana via metaplex: `, error);
             let feeWithoutChainPortalFee = solMintFee - parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
     
