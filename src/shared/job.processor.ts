@@ -6,7 +6,6 @@ import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -46,14 +45,14 @@ export class JobProcessor {
         // From this point evry redirect will only redirected after deducting the mintFees
 
         // ------------------ Metadata upload ---------------------------------
-        const metadataUploadResult = await this.metaplexSrv.uploadNFTMetadataToArweave(data.NftMetadata, 'NFT', mintFees.SOL, data.paymentTxSignature);
+        const metadataUploadResult = await this.metaplexSrv.uploadNFTMetadataToArweave(data.NftMetadata, mintFees.SOL, data.paymentTxSignature);
         if (!metadataUploadResult.successful) {wsClientEmitError({id: 1, errorMessage: metadataUploadResult.uri}); return;}
         wsClientEmit({id: 1, txId: null});
         // ------------------ Metadata upload ---------------------------------
      
         // ------------------ Mint the NFT ------------------------------------
-        const minted = await this.metaplexSrv.mintSolNFT(validation.senderPubkey, (validation.recipientBalanceChange / LAMPORTS_PER_SOL), metadataUploadResult.uri, 
-          {name: data.NftMetadata.title, symbol: data.NftMetadata.symbol, royalty: data.NftMetadata.royalty}, mintFees.SOL, data.paymentTxSignature);
+        const minted = await this.metaplexSrv.mintSolNFT(validation.senderPubkey, validation.recipientBalanceChange, metadataUploadResult.uri, 
+          data.NftMetadata.title, data.NftMetadata.royalty, data.NftMetadata.attributes, mintFees.SOL, data.paymentTxSignature);
         if (!minted.successful) {wsClientEmitError({id: 2, errorMessage: minted.txId}); return;}
         wsClientEmit({id: 2, txId: minted.txId});
         // ------------------ Mint the NFT ------------------------------------

@@ -35,6 +35,7 @@ export interface NftMetadata {
   description: string;                   // Description of the NFT
   media: Uint8Array | null;              // Media file (can be an image, video, etc.)
   mediaName: string;                     // Media file name
+  mediaContentType: string;              // Media content type
   symbol: string;                        // Symbol of the NFT
   attributes: Array<Attribute>;          // Array of attributes for the NFT
   creator?: string;                      // Optional creator information
@@ -48,7 +49,7 @@ export interface NftMetadata {
   creationTimestampToggle: boolean;      // Toggle for including timestamp
   creationTimestamp: string;             // Timestamp in ISO format (optional)
 }
-interface Attribute {
+export interface Attribute {
   type: string;                         // Type of the attribute (e.g., Color)
   value: string;                        // Value of the attribute (e.g., Red)
 }
