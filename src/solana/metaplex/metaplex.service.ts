@@ -104,15 +104,17 @@ export class MetaplexService {
         } catch (error) {
             console.error(`Error uploading media ${mediaName} file to arweave/irys via metaplex umi: `, error);
 
-            let feeWithoutChainPortalFee = solMintFee;
+            let metadataUploadFee = solMintFee;
             if (assetType === "NFT") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
             } else if (assetType === "Token") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
             }
 
             // Redirect the payment after deducting potential fees
-            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, feeWithoutChainPortalFee);
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, metadataUploadFee);
             if (redirect.isValid) {
                 return {successful: false, fileUri: `Unable to upload media file to Arweave so your payment was redirected after deducting the estimated fee(s). Please try again.`};
             } else {
@@ -131,15 +133,17 @@ export class MetaplexService {
         } catch (error) {
             console.error(`Error uploading metadata (${JSON.stringify(metadata)}) to arweave/irys via metaplex umi: `, error);
 
-            let feeWithoutChainPortalFee = solMintFee;
+            let metadataUploadFee = solMintFee;
             if (assetType === "NFT") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
             } else if (assetType === "Token") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
+                metadataUploadFee -= parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
             }
 
             // Redirect the payment after deducting potential fees
-            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, feeWithoutChainPortalFee);
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, metadataUploadFee);
             if (redirect.isValid) {
                 return {successful: false, metadataUri: `Unable to upload metadata to Arweave so your payment was redirected after deducting the estimated fee(s). Please try again.`};
             } else {
@@ -169,19 +173,43 @@ export class MetaplexService {
             }).sendAndConfirm(this.umi);
             if (result.result.value.err) throw new Error(`Solana NFT minting error, using Metaplex Umi Core: ${result.result.value.err}`);
 
-            // Save the transaction to the db, bc it was successful
-            const mintTxHistory = await this.prismaSrv.saveMintTxHistory({
-                assetType: 'NFT',
-                blockchain: 'SOL',
-                paymentPubKey: toPubkey,
-                paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
-                expenseAmount: solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE')),// TODO - Need to calculate this also and evrwhere where i save data to db
-                paymentTxSignature: paymentTxSignature,
-                rewardTxs: [{txSignature: bs58.encode(result.signature), type: 'mint'}]
-            });
+            try {
+                // Calcualte the exact expense amount i payed for on chain minting and add the estimated metadata upload fee
+                const ourSolBallanceChange = await this.solanaSrv.getOurSolBallanceChange(bs58.encode(result.signature));
+                let expenses = 0;
+                if (ourSolBallanceChange && ourSolBallanceChange < 0) {
+                    const metadataUploadFees = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE')) - parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE')); 
+                    expenses = metadataUploadFees + (ourSolBallanceChange * -1);
+                } else {
+                    expenses = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
+                }
 
-            // Return the mint transaction db history id
-            return {successful: true, txId: mintTxHistory.mainTx.id};
+                // Save the transaction to the db, bc it was successful
+                const mintTxHistory = await this.prismaSrv.saveMintTxHistory({
+                    assetType: 'NFT',
+                    blockchain: 'SOL',
+                    paymentPubKey: toPubkey,
+                    paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
+                    expenseAmount: expenses,
+                    paymentTxSignature: paymentTxSignature,
+                    rewardTxs: [{txSignature: bs58.encode(result.signature), type: 'mint'}]
+                });
+                // Return the mint transaction db history id
+                return {successful: true, txId: mintTxHistory.mainTx.id};
+            } catch (error) {
+                // Save the transaction to the db, bc it was successful, however coudnt calculate the exact expense amount, so use estimate
+                const mintTxHistory = await this.prismaSrv.saveMintTxHistory({
+                    assetType: 'NFT',
+                    blockchain: 'SOL',
+                    paymentPubKey: toPubkey,
+                    paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
+                    expenseAmount: solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE')),
+                    paymentTxSignature: paymentTxSignature,
+                    rewardTxs: [{txSignature: bs58.encode(result.signature), type: 'mint'}]
+                });
+                // Return the mint transaction db history id
+                return {successful: true, txId: mintTxHistory.mainTx.id};
+            }
         } catch (error) {
             console.error(`Error minting NFT on Solana via metaplex umi core: `, error);
             let feeWithoutChainPortalFee = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));

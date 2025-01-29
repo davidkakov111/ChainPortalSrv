@@ -223,7 +223,7 @@ export class SolanaService {
                 assetType: assetType,
                 blockchain: 'SOL',
                 paymentPubKey: pubkey.toString(),
-                paymentAmount: solAmountWithFee,
+                paymentAmount: originalPaymnetSolAmount,
                 expenseAmount: solAmountWithFee,
                 paymentTxSignature: insuficientPaymentTxSignature,
                 rewardTxs: [{txSignature: `Refund failed (the expense amount is unknown on the ChainPortal side), error: ${refundObj.error}`, type: 'refund'}]
