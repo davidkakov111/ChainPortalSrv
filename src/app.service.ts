@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { cliEnv, transaction } from './shared/interfaces';
 import { assetType, blockchainFees, blockchainSymbols, operationType } from './shared/types';
 import { PrismaService } from './prisma/prisma/prisma.service';
-import { SolanaFeesService } from './solana/solana-fees/solana-fees.service';
 import { MetaplexService } from './solana/metaplex/metaplex.service';
 import { HelperService } from './shared/helper/helper/helper.service';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -14,7 +13,6 @@ export class AppService {
   constructor(
     private readonly configSrv: ConfigService,
     private readonly prismaSrv: PrismaService,
-    private readonly solanaFeesSrv: SolanaFeesService,
     private readonly metaplexSrv: MetaplexService,
     private readonly helperSrv: HelperService,
     private readonly solHelpersSrv: SolanaHelpersService
@@ -55,13 +53,13 @@ export class AppService {
     // Calculate & save the fees for the rest blockchains with ChainPortal fees
     for (let i of blockchainSymbols) {
       if (i === "SOL") {
-        // Basic fees without metadata upload fees
-        result.SOL = await this.solanaFeesSrv.calculateFees("mint", assetType);
-
-        // ChainPortal fees
+        // TODO - It would be better to calculate them dynamically, but I haven't figured out how to do it for NFT minting yet.
+        // ChainPortal & On chain fees
         if (assetType === "NFT") {
+          result.SOL = parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
           result.SOL += parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
         } else if (assetType === "Token") {
+          result.SOL = parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
           result.SOL += parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
         }
 

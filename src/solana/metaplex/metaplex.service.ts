@@ -106,9 +106,9 @@ export class MetaplexService {
 
             let feeWithoutChainPortalFee = solMintFee;
             if (assetType === "NFT") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
             } else if (assetType === "Token") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
             }
 
             // Redirect the payment after deducting potential fees
@@ -133,9 +133,9 @@ export class MetaplexService {
 
             let feeWithoutChainPortalFee = solMintFee;
             if (assetType === "NFT") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
             } else if (assetType === "Token") {
-                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
+                feeWithoutChainPortalFee -= parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
             }
 
             // Redirect the payment after deducting potential fees
@@ -175,7 +175,7 @@ export class MetaplexService {
                 blockchain: 'SOL',
                 paymentPubKey: toPubkey,
                 paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
-                expenseAmount: solMintFee - parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE')),// TODO - Need to calculate this also and evrwhere where i save data to db
+                expenseAmount: solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE')),// TODO - Need to calculate this also and evrwhere where i save data to db
                 paymentTxSignature: paymentTxSignature,
                 rewardTxs: [{txSignature: bs58.encode(result.signature), type: 'mint'}]
             });
@@ -184,7 +184,7 @@ export class MetaplexService {
             return {successful: true, txId: mintTxHistory.mainTx.id};
         } catch (error) {
             console.error(`Error minting NFT on Solana via metaplex umi core: `, error);
-            let feeWithoutChainPortalFee = solMintFee - parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
+            let feeWithoutChainPortalFee = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
     
             // Redirect the payment after deducting potential fees
             const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, 'NFT', feeWithoutChainPortalFee);
