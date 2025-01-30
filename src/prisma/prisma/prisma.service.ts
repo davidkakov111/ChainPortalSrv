@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { assetType, blockchainSymbols } from 'src/shared/types';
+import { assetType, blockchainSymbols, rewardTxsType } from 'src/shared/types';
 
 @Injectable()
 export class PrismaService
@@ -94,7 +94,7 @@ export class PrismaService
     paymentAmount: number,
     expenseAmount: number,
     paymentTxSignature: string,
-    rewardTxs: { txSignature: string, type: string }[]
+    rewardTxs: { txSignature: string, type: rewardTxsType }[]
   }) {
     // Use transaction to ensure both operations succeed or fail together
     return await this.$transaction(async (tx) => {

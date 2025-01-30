@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Connection, ConfirmOptions, TransactionSignature, clusterApiUrl, VersionedTransactionResponse, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair, MessageCompiledInstruction, ConfirmedTransactionMeta } from '@solana/web3.js';
 import { cliEnv } from 'src/shared/interfaces';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
-import { assetType } from 'src/shared/types';
+import { assetType, rewardTxsType } from 'src/shared/types';
 import { SolanaHelpersService } from '../solana-helpers/solana-helpers.service';
 
 @Injectable()
@@ -175,7 +175,7 @@ export class SolanaService {
     }
 
     // Refund the user in SOL after deducting the estimated refund fee and save the transaction to the db
-    async refundInSOL(pubkey: PublicKey, solAmountWithFee: number, insuficientPaymentTxSignature: string, assetType: assetType, originalPaymnetSolAmount: number): Promise<{
+    async refundInSOL(pubkey: PublicKey, solAmountWithFee: number, insuficientPaymentTxSignature: string, assetType: assetType, originalPaymnetSolAmount: number, reasonForDeduct?: {txSignature: string, type: rewardTxsType}[]): Promise<{
         refunded: boolean;
         message: string;
     }> {
@@ -210,7 +210,7 @@ export class SolanaService {
                 paymentAmount: originalPaymnetSolAmount,
                 expenseAmount: expenseSolAmount,
                 paymentTxSignature: insuficientPaymentTxSignature,
-                rewardTxs: [{txSignature: refundObj.signature, type: 'refund'}]
+                rewardTxs: [...(reasonForDeduct ? reasonForDeduct : []), {txSignature: refundObj.signature, type: 'refund'}]
             });
 
             console.error('Refund of the user\'s transaction ('+ insuficientPaymentTxSignature +') was successful: ', refundObj.signature);
@@ -226,14 +226,14 @@ export class SolanaService {
                 paymentAmount: originalPaymnetSolAmount,
                 expenseAmount: solAmountWithFee,
                 paymentTxSignature: insuficientPaymentTxSignature,
-                rewardTxs: [{txSignature: `Refund failed (the expense amount is unknown on the ChainPortal side), error: ${refundObj.error}`, type: 'refund'}]
+                rewardTxs: [...(reasonForDeduct ? reasonForDeduct : []), {txSignature: `Refund failed (the expense amount is unknown on the ChainPortal side), error: ${refundObj.error}`, type: 'refund'}]
             });
             return {refunded: false, message: "Your refund failed. Please try again."};
         }
     }
 
     // Redirect payment if it is enough for the refund fee
-    async redirectSolPayment(paymentTxSignature: string, assetType: assetType, needToDeductSol?: number): Promise<{isValid: boolean, message?: string}> {
+    async redirectSolPayment(paymentTxSignature: string, assetType: assetType, needToDeductSol?: number, reasonForDeduct?: {txSignature: string, type: rewardTxsType}[]): Promise<{isValid: boolean, message?: string}> {
         try {
             // Get transfer instruction by transaction signature
             const txDetails = await this.getSenderPubKeyAndOurBallanceChange(paymentTxSignature);
@@ -247,7 +247,7 @@ export class SolanaService {
             const estimatedRefundFee = this.defaultLamportTransactionFee;
             if (recipientBalanceChangeWithDeduct > estimatedRefundFee) {
                 // This function also deducts the estimated refund fee
-                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChangeWithDeduct / LAMPORTS_PER_SOL), paymentTxSignature, assetType, (recipientBalanceChange / LAMPORTS_PER_SOL));
+                const refundObj = await this.refundInSOL(senderPubkey, (recipientBalanceChangeWithDeduct / LAMPORTS_PER_SOL), paymentTxSignature, assetType, (recipientBalanceChange / LAMPORTS_PER_SOL), reasonForDeduct);
                 return {isValid: refundObj.refunded, message: refundObj.message};
             } else {
                 console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough SOL, even for refund (with deduction):', paymentTxSignature);

@@ -114,7 +114,7 @@ export class MetaplexService {
             }
 
             // Redirect the payment after deducting potential fees
-            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, metadataUploadFee);
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, metadataUploadFee, [{txSignature: `Media file upload to Arweave failed via Metaplex UMI.`, type: 'metadata upload'}]);
             if (redirect.isValid) {
                 return {successful: false, fileUri: `Unable to upload media file to Arweave so your payment was redirected after deducting the estimated fee(s). Please try again.`};
             } else {
@@ -143,7 +143,10 @@ export class MetaplexService {
             }
 
             // Redirect the payment after deducting potential fees
-            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, metadataUploadFee);
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, assetType, metadataUploadFee, [
+                {txSignature: `Media file upload to Arweave via Metaplex UMI.`, type: 'metadata upload'}, 
+                {txSignature: "Metadata object upload to Arweave failed via Metaplex UMI.", type: 'metadata upload'}
+            ]);
             if (redirect.isValid) {
                 return {successful: false, metadataUri: `Unable to upload metadata to Arweave so your payment was redirected after deducting the estimated fee(s). Please try again.`};
             } else {
@@ -192,7 +195,11 @@ export class MetaplexService {
                     paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
                     expenseAmount: expenses,
                     paymentTxSignature: paymentTxSignature,
-                    rewardTxs: [{txSignature: bs58.encode(result.signature), type: 'mint'}]
+                    rewardTxs: [
+                        {txSignature: `Media file upload to Arweave via Metaplex UMI.`, type: 'metadata upload'}, 
+                        {txSignature: "Metadata object upload to Arweave via Metaplex UMI.", type: 'metadata upload'},
+                        {txSignature: bs58.encode(result.signature), type: 'mint'}
+                    ]
                 });
                 // Return the mint transaction db history id
                 return {successful: true, txId: mintTxHistory.mainTx.id};
@@ -205,7 +212,11 @@ export class MetaplexService {
                     paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
                     expenseAmount: solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE')),
                     paymentTxSignature: paymentTxSignature,
-                    rewardTxs: [{txSignature: bs58.encode(result.signature), type: 'mint'}]
+                    rewardTxs: [
+                        {txSignature: `Media file upload to Arweave via Metaplex UMI.`, type: 'metadata upload'}, 
+                        {txSignature: "Metadata object upload to Arweave via Metaplex UMI.", type: 'metadata upload'},
+                        {txSignature: bs58.encode(result.signature), type: 'mint'}
+                    ]
                 });
                 // Return the mint transaction db history id
                 return {successful: true, txId: mintTxHistory.mainTx.id};
@@ -215,7 +226,11 @@ export class MetaplexService {
             let feeWithoutChainPortalFee = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
     
             // Redirect the payment after deducting potential fees
-            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, 'NFT', feeWithoutChainPortalFee);
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, 'NFT', feeWithoutChainPortalFee, [
+                {txSignature: `Media file upload to Arweave via Metaplex UMI.`, type: 'metadata upload'}, 
+                {txSignature: "Metadata object upload to Arweave via Metaplex UMI.", type: 'metadata upload'},
+                {txSignature: "NFT minting failed with Metaplex UMI on Solana blockchain.", type: 'mint'}
+            ]);
             if (redirect.isValid) {
                 return {successful: false, txId: `Unable to mint NFT on Solana via Metaplex so your payment was redirected after deducting the estimated fee(s). Please try again.`};
             } else {
