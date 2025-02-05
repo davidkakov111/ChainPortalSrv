@@ -266,7 +266,7 @@ export class SolanaService {
         if (!txDetails.isValid) return {isValid: false, errorMessage: txDetails.errorMessage};
         const {senderPubkey, recipientBalanceChange} = txDetails;
 
-        // Refund the user, bc coudnt calculate the total price for their NFT minting
+        // Refund the user, bc coudnt calculate the total price for their operation
         if (!requiredSolPaymentAmount) {
             const estimatedRefundFee = this.defaultLamportTransactionFee;
             if (recipientBalanceChange > estimatedRefundFee) {

@@ -1,14 +1,15 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { LAMPORTS_PER_SOL, clusterApiUrl } from '@solana/web3.js';
 import { ConfigService } from '@nestjs/config';
-import { Attribute, cliEnv, NftMetadata } from 'src/shared/interfaces';
+import { Attribute, cliEnv, NftMetadata, TokenMetadata } from 'src/shared/interfaces';
 import { SolanaHelpersService } from '../solana-helpers/solana-helpers.service';
 import { assetType } from 'src/shared/types';
 import { SolanaService } from '../solana/solana.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults'
 import { create, mplCore, ruleSet } from '@metaplex-foundation/mpl-core'
-import { createSignerFromKeypair, generateSigner, GenericFile, publicKey, signerIdentity, Umi } from '@metaplex-foundation/umi';
+import { createSignerFromKeypair, generateSigner, GenericFile, publicKey, signerIdentity, Umi, percentAmount } from '@metaplex-foundation/umi';
+import { TokenStandard, createAndMint, mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata'
 import { fromWeb3JsKeypair } from '@metaplex-foundation/umi-web3js-adapters';  
 import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 import bs58 from 'bs58';
@@ -31,11 +32,12 @@ export class MetaplexService {
         const selectedCluster = cliEnv.blockchainNetworks.solana.selected === 'devnet' ? 'devnet' : 'mainnet-beta';
         const clusterUrl = clusterApiUrl(selectedCluster);
 
-        // Create umi with ChainPortal keypair, mplCore and irys uploader
+        // Create umi with ChainPortal keypair, mplCore, mplTokenMetadata, and irys uploader
         const umi = createUmi(clusterUrl).use(mplCore()).use(
             irysUploader({address: selectedCluster === 'devnet' ? 'https://devnet.irys.xyz' : 'https://node1.irys.xyz'}));
         const umiSigner = createSignerFromKeypair(umi, fromWeb3JsKeypair(keypair));
-        this.umi = umi.use(signerIdentity(umiSigner));
+        umi.use(signerIdentity(umiSigner));
+        this.umi = umi.use(mplTokenMetadata());
     }
 
     // Calculate metadata upload fee in SOL for arweave, by metadata byte size
@@ -81,6 +83,18 @@ export class MetaplexService {
             ...(metadataObject.externalLink && { external_url: metadataObject.externalLink }),
             ...(metadataObject.creationTimestampToggle && { creationTimestamp: metadataObject.creationTimestamp }),
         }, solMintFee, 'NFT', paymentTxSignature);
+        return {successful: metadataUploadResult.successful, uri: metadataUploadResult.metadataUri};
+    }
+
+    // Upload complete token metadata (file & metadata) to Arweave
+    async uploadTokenMetadataToArweave(metadataObject: TokenMetadata, solMintFee: number, paymentTxSignature: string): Promise<{successful: boolean, uri: string}> {
+        const fileUploadResult = await this.uploadMediaToArweave(metadataObject.media, metadataObject.mediaName, metadataObject.mediaContentType, 'Token', solMintFee, paymentTxSignature);
+        if (!fileUploadResult.successful) {return {successful: false, uri: fileUploadResult.fileUri}};
+        
+        const metadataUploadResult = await this.uploadMetadataObjToArweave({
+            name: metadataObject.name, symbol: metadataObject.symbol,
+            description: metadataObject.description, image: fileUploadResult.fileUri
+        }, solMintFee, 'Token', paymentTxSignature);
         return {successful: metadataUploadResult.successful, uri: metadataUploadResult.metadataUri};
     }
 
@@ -235,6 +249,87 @@ export class MetaplexService {
                 return {successful: false, txId: `Unable to mint NFT on Solana via Metaplex so your payment was redirected after deducting the estimated fee(s). Please try again.`};
             } else {
                 return {successful: false, txId: `Unable to mint NFT on Solana via Metaplex so your payment was redirected but maybe failed. Please try again.`};
+            }
+        }
+    }
+
+    // Mint tokens on Solana blockchain
+    async mintSolTokens(toPubkey: string, lamportPaymentAmount: number, metadataUri: string, tokenMetadata: TokenMetadata, solMintFee: number, paymentTxSignature: string): Promise<{successful: boolean, txId: number | string}> {
+        try {
+            const mint = generateSigner(this.umi);
+            const result = await createAndMint(this.umi, {
+                mint,
+                authority: this.umi.identity,
+                name: tokenMetadata.name,
+                symbol: tokenMetadata.symbol,
+                uri: metadataUri,
+                sellerFeeBasisPoints: percentAmount(0),
+                decimals: tokenMetadata.decimals,
+                amount: tokenMetadata.supply,
+                tokenOwner: publicKey(toPubkey),
+                tokenStandard: TokenStandard.Fungible,
+            }).sendAndConfirm(this.umi)
+            if (result.result.value.err) throw new Error(`Solana token minting error, using Metaplex Umi Core: ${result.result.value.err}`);
+
+            try {
+                // Calcualte the exact expense amount i payed for on chain minting and add the estimated metadata upload fee
+                const ourSolBallanceChange = await this.solanaSrv.getOurSolBallanceChange(bs58.encode(result.signature));
+                let expenses = 0;
+                if (ourSolBallanceChange && ourSolBallanceChange < 0) {
+                    const metadataUploadFees = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE')) - parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE')); 
+                    expenses = metadataUploadFees + (ourSolBallanceChange * -1);
+                } else {
+                    expenses = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
+                }
+
+                // Save the transaction to the db, bc it was successful
+                const mintTxHistory = await this.prismaSrv.saveMintTxHistory({
+                    assetType: 'Token',
+                    blockchain: 'SOL',
+                    paymentPubKey: toPubkey,
+                    paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
+                    expenseAmount: expenses,
+                    paymentTxSignature: paymentTxSignature,
+                    rewardTxs: [
+                        {txSignature: `Media file upload to Arweave via Metaplex UMI.`, type: 'metadata upload'}, 
+                        {txSignature: "Metadata object upload to Arweave via Metaplex UMI.", type: 'metadata upload'},
+                        {txSignature: bs58.encode(result.signature), type: 'mint'}
+                    ]
+                });
+                // Return the mint transaction db history id
+                return {successful: true, txId: mintTxHistory.mainTx.id};
+            } catch (error) {
+                // Save the transaction to the db, bc it was successful, however coudnt calculate the exact expense amount, so use estimate
+                const mintTxHistory = await this.prismaSrv.saveMintTxHistory({
+                    assetType: 'Token',
+                    blockchain: 'SOL',
+                    paymentPubKey: toPubkey,
+                    paymentAmount: lamportPaymentAmount / LAMPORTS_PER_SOL,
+                    expenseAmount: solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE')),
+                    paymentTxSignature: paymentTxSignature,
+                    rewardTxs: [
+                        {txSignature: `Media file upload to Arweave via Metaplex UMI.`, type: 'metadata upload'}, 
+                        {txSignature: "Metadata object upload to Arweave via Metaplex UMI.", type: 'metadata upload'},
+                        {txSignature: bs58.encode(result.signature), type: 'mint'}
+                    ]
+                });
+                // Return the mint transaction db history id
+                return {successful: true, txId: mintTxHistory.mainTx.id};
+            }
+        } catch (error) {
+            console.error(`Error minting tokens on Solana via metaplex umi core: `, error);
+            let feeWithoutChainPortalFee = solMintFee - parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
+    
+            // Redirect the payment after deducting potential fees
+            const redirect = await this.solanaSrv.redirectSolPayment(paymentTxSignature, 'Token', feeWithoutChainPortalFee, [
+                {txSignature: `Media file upload to Arweave via Metaplex UMI.`, type: 'metadata upload'},
+                {txSignature: "Metadata object upload to Arweave via Metaplex UMI.", type: 'metadata upload'},
+                {txSignature: "Token minting failed with Metaplex UMI on Solana blockchain.", type: 'mint'}
+            ]);
+            if (redirect.isValid) {
+                return {successful: false, txId: `Unable to mint tokens on Solana via Metaplex so your payment was redirected after deducting the estimated fee(s). Please try again.`};
+            } else {
+                return {successful: false, txId: `Unable to mint tokens on Solana via Metaplex so your payment was redirected but maybe failed. Please try again.`};
             }
         }
     }

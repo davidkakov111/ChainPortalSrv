@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { blockchainFees, blockchainSymbols } from './types';
-import { NftMetadata } from './interfaces';
+import { NftMetadata, TokenMetadata } from './interfaces';
 import { SolanaService } from 'src/solana/solana/solana.service';
 import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
@@ -55,13 +55,59 @@ export class JobProcessor {
         wsClientEmit({id: 2, txId: minted.txId});
         // ------------------ Mint the NFT ------------------------------------
       } catch (error) {
-        console.error('SolanaNFT minting job failed:', error);
+        console.error('Solana NFT minting job failed:', error);
         wsClientEmitError({id: -1, errorMessage: 'Solana NFT minting failed. Please try again.'});
         return;
       }
     } else {
       // TODO - Add support for other blockchains later
       wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for NFT minting. Please use a different blockchain'});
+    }
+  }
+
+  // Token minting job
+  async handleTokenMintingJob(
+    wsClientEmit: (message: any) => void, 
+    wsClientEmitError: (errorMessage: any) => void, 
+    data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, TokenMetadata: TokenMetadata}
+  ) {
+    // Ensure the payment transaction wasn't used before
+    const newPayment = await this.wsJobProcessorNewTransactionValidator(wsClientEmitError, data.paymentTxSignature);
+    if (!newPayment) return;
+
+    // Try to calculate the Token mint fees, according to the metadata size
+    const mintFees: blockchainFees | undefined = await this.wsJobProcessorTokenMintFeesCalculator(wsClientEmitError, data);
+    if (!mintFees) return;
+
+    // Spread the logic by blockchains
+    if (data.bChainSymbol === 'SOL') {
+      try {
+        // ------------------ Payment transaction validation ------------------
+        const validation = await this.solanaService.validateSolPaymentTx(data.paymentTxSignature, mintFees.SOL, 'Token');
+        if (!validation.isValid) {wsClientEmitError({id: 0, errorMessage: validation.errorMessage}); return;}
+        wsClientEmit({id: 0, txId: null});
+        // ------------------ Payment transaction validation ------------------
+
+        // ------------------ Token icon upload ---------------------------------
+        const metadataUploadResult = await this.metaplexSrv.uploadTokenMetadataToArweave(data.TokenMetadata, mintFees.SOL, data.paymentTxSignature);      
+        if (!metadataUploadResult.successful) {wsClientEmitError({id: 1, errorMessage: metadataUploadResult.uri}); return;}
+        wsClientEmit({id: 1, txId: null});
+        // ------------------ Token icon upload ---------------------------------
+
+        // ------------------ Mint the tokens ------------------------------------
+        const minted = await this.metaplexSrv.mintSolTokens(validation.senderPubkey, validation.recipientBalanceChange, metadataUploadResult.uri, 
+          data.TokenMetadata, mintFees.SOL, data.paymentTxSignature);
+        if (!minted.successful) {wsClientEmitError({id: 2, errorMessage: minted.txId}); return;}
+        wsClientEmit({id: 2, txId: minted.txId});
+        // ------------------ Mint the tokens ------------------------------------
+      } catch (error) {
+        console.error('Solana token minting job failed:', error);
+        wsClientEmitError({id: -1, errorMessage: 'Solana token minting failed. Please try again.'});
+        return;
+      }
+    } else {
+      // TODO - Add support for other blockchains later
+      wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for token minting. Please use a different blockchain'});
     }
   }
 
@@ -88,7 +134,7 @@ export class JobProcessor {
     data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
   ): Promise<blockchainFees | undefined> {
     try {
-      const metadataByteSize = this.helperSrv.calcNftMetadataByteSize(data.NftMetadata);
+      const metadataByteSize = this.helperSrv.calcMetadataByteSize(data.NftMetadata);
       if (typeof metadataByteSize === 'string') throw new Error(metadataByteSize);
       const mintFees = await this.appSrv.getMintFees("NFT", [data.bChainSymbol], metadataByteSize);
       return mintFees;
@@ -101,6 +147,33 @@ export class JobProcessor {
         wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the NFT minting fees. Your payment was redirected but maybe failed: "' + redirect.message + '". Please try again.'});
       }
       console.error('Failed to calculate NFT mint fees:', error);
+      return;
+    }
+  }
+
+  // Return token mint fees, if coudn't calculate it, refund and return ws response
+  async wsJobProcessorTokenMintFeesCalculator(
+    wsClientEmitError: (errorMessage: any) => void,
+    data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, TokenMetadata: TokenMetadata}
+  ): Promise<blockchainFees | undefined> {
+    try {
+      const metadataByteSize = this.helperSrv.calcMetadataByteSize({
+        name: data.TokenMetadata.name, symbol: data.TokenMetadata.symbol, description: data.TokenMetadata.description,
+        image: "https://gateway.irys.xyz/7ocJMYa6UPZcFPKiYtqsG6uJJzNmLNFHrtcDixXMRALZ", media: data.TokenMetadata.media
+      });
+
+      if (typeof metadataByteSize === 'string') throw new Error(metadataByteSize);
+      const mintFees = await this.appSrv.getMintFees("Token", [data.bChainSymbol], metadataByteSize);
+      return mintFees;
+    } catch (error) {
+      // Redirect the payment if some error occurs
+      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'Token');
+      if (redirect.isValid) {
+        wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the token minting fees so your payment was redirected after deducting the estimated refund fee. Please try again.'});
+      } else {
+        wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the token minting fees. Your payment was redirected but maybe failed: "' + redirect.message + '". Please try again.'});
+      }
+      console.error('Failed to calculate token mint fees:', error);
       return;
     }
   }

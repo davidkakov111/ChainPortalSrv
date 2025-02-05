@@ -10,7 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JobProcessor } from '../shared/job.processor';
 import { blockchainSymbols } from 'src/shared/types';
-import { NftMetadata } from 'src/shared/interfaces';
+import { NftMetadata, TokenMetadata } from 'src/shared/interfaces';
 
 // Webshocket gateway to handle websocket connections
 @WebSocketGateway({
@@ -55,6 +55,32 @@ export class WebshocketGateway implements OnGatewayConnection, OnGatewayDisconne
     } catch (error) {
       console.error('Error processing NFT mint webshocket request:', error);
       client.emit('mint-nft-error', 'Minting process failed');
+      client.disconnect();
+    }
+  }
+
+  // Token mint websocket endpoint
+  @SubscribeMessage('mint-token')
+  async handleTokenMintRequest(
+    @ConnectedSocket() client: Socket, 
+    @MessageBody() data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, TokenMetadata: TokenMetadata},
+  ): Promise<void> {
+    try {
+      // Create functions to emit status updates to the client
+      const emitStatus = (message: any) => {
+        if (client.connected) client.emit('mint-token-status', message);
+      };
+      const emitError = (errorMessage: any) => {
+        if (client.connected) client.emit('mint-token-error', errorMessage);
+      };
+      
+      // Start the job processing (in the backround, independent of the client connection for security)
+      await this.jobProcessor.handleTokenMintingJob(emitStatus, emitError, data);
+      
+      client.disconnect();
+    } catch (error) {
+      console.error('Error processing Token mint webshocket request:', error);
+      client.emit('mint-token-error', 'Minting process failed');
       client.disconnect();
     }
   }

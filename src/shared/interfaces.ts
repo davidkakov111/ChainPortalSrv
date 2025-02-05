@@ -53,3 +53,15 @@ export interface Attribute {
   type: string;                         // Type of the attribute (e.g., Color)
   value: string;                        // Value of the attribute (e.g., Red)
 }
+
+export interface TokenMetadata {
+  name: string;                          // Name of the token
+  symbol: string;                        // Symbol of the token
+  media: Uint8Array | null;              // Media file (can be an image, video, etc.)
+  supply?: number;                       // Total supply of the token
+  decimals?: number;                     // How many decimal places should the token have
+  description?: string;                  // Description of the token
+  externalLink?: string;                 // Optional external link
+  mediaName: string;                     // Media file name
+  mediaContentType: string;              // Media content type
+}
