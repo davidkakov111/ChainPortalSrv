@@ -92,8 +92,9 @@ export class MetaplexService {
         if (!fileUploadResult.successful) {return {successful: false, uri: fileUploadResult.fileUri}};
         
         const metadataUploadResult = await this.uploadMetadataObjToArweave({
-            name: metadataObject.name, symbol: metadataObject.symbol, external_url: metadataObject.externalLink,
-            description: metadataObject.description, image: fileUploadResult.fileUri
+            name: metadataObject.name, symbol: metadataObject.symbol, image: fileUploadResult.fileUri,
+            ...(metadataObject.externalLink && { external_url: metadataObject.externalLink}),
+            ...(metadataObject.description && { description: metadataObject.description})
         }, solMintFee, 'Token', paymentTxSignature);
         return {successful: metadataUploadResult.successful, uri: metadataUploadResult.metadataUri};
     }
@@ -264,8 +265,8 @@ export class MetaplexService {
                 symbol: tokenMetadata.symbol,
                 uri: metadataUri,
                 sellerFeeBasisPoints: percentAmount(0),
-                decimals: tokenMetadata.decimals,
-                amount: tokenMetadata.supply,
+                decimals: tokenMetadata.decimals ? tokenMetadata.decimals : 0,
+                amount: tokenMetadata.supply ? tokenMetadata.supply : 1,
                 tokenOwner: publicKey(toPubkey),
                 tokenStandard: TokenStandard.Fungible,
             }).sendAndConfirm(this.umi)

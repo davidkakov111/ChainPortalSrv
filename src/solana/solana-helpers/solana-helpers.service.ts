@@ -52,9 +52,9 @@ export class SolanaHelpersService {
             return {success: false, error: 'Token symbol is required and should be less then 10 character long.'};
         } else if (!metadata.media) {
             return {success: false, error: 'Token icon media is required.'};
-        } else if (!metadata.supply || metadata.supply < 1 || metadata.supply > 1e19) {
+        } else if (metadata.supply === 0 || metadata.supply && (metadata.supply < 1 || metadata.supply > 1e19)) {
             return {success: false, error: 'Token supply should be positive number and max 1e19.'};
-        } else if (!metadata.decimals || metadata.decimals < 0 || metadata.decimals > 9) {
+        } else if (metadata.decimals && (metadata.decimals < 0 || metadata.decimals > 9)) {
             return {success: false, error: 'Token decimal should not be negative number and more then 9.'};
         }
         return {success: true, error: ''};
