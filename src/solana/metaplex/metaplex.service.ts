@@ -92,7 +92,7 @@ export class MetaplexService {
         if (!fileUploadResult.successful) {return {successful: false, uri: fileUploadResult.fileUri}};
         
         const metadataUploadResult = await this.uploadMetadataObjToArweave({
-            name: metadataObject.name, symbol: metadataObject.symbol,
+            name: metadataObject.name, symbol: metadataObject.symbol, external_url: metadataObject.externalLink,
             description: metadataObject.description, image: fileUploadResult.fileUri
         }, solMintFee, 'Token', paymentTxSignature);
         return {successful: metadataUploadResult.successful, uri: metadataUploadResult.metadataUri};

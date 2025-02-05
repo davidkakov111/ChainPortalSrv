@@ -6,6 +6,7 @@ import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
+import { SolanaHelpersService } from 'src/solana/solana-helpers/solana-helpers.service';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -15,6 +16,7 @@ export class JobProcessor {
     private readonly appSrv: AppService,
     private readonly helperSrv: HelperService,
     private readonly solanaService: SolanaService,
+    private readonly solanaHelpersSrv: SolanaHelpersService,
     private readonly prismaService: PrismaService,
     private readonly metaplexSrv: MetaplexService,
   ) {}
@@ -74,6 +76,19 @@ export class JobProcessor {
     // Ensure the payment transaction wasn't used before
     const newPayment = await this.wsJobProcessorNewTransactionValidator(wsClientEmitError, data.paymentTxSignature);
     if (!newPayment) return;
+
+    // Ensure the metadata is valid
+    const metadataValidation = this.solanaHelpersSrv.validateTokenMetadata(data.TokenMetadata);
+    if (!metadataValidation.success) {
+      // Redirect the payment bc the metadata is invalid
+      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'Token');
+      if (redirect.isValid) {
+        wsClientEmitError({id: 0, errorMessage: `Provided token metadata is invalid: "${metadataValidation.error}" so your payment was redirected after deducting the estimated refund fee. Please try again.`});
+      } else {
+        wsClientEmitError({id: 0, errorMessage: `Provided token metadata is invalid: "${metadataValidation.error}". Your payment was redirected but maybe failed: "${redirect.message}". Please try again.`});
+      } 
+      return;
+    }
 
     // Try to calculate the Token mint fees, according to the metadata size
     const mintFees: blockchainFees | undefined = await this.wsJobProcessorTokenMintFeesCalculator(wsClientEmitError, data);

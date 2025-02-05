@@ -97,7 +97,7 @@ export class SolanaService {
                 SystemProgram.transfer({
                     fromPubkey: fromWallet.publicKey,
                     toPubkey: toWallet,
-                    lamports: solAmount * LAMPORTS_PER_SOL
+                    lamports: Math.floor(solAmount * LAMPORTS_PER_SOL)
                 })
             );
 
