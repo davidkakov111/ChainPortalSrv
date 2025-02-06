@@ -36,18 +36,18 @@ export interface NftMetadata {
   media: Uint8Array | null;              // Media file (can be an image, video, etc.)
   mediaName: string;                     // Media file name
   mediaContentType: string;              // Media content type
-  symbol: string;                        // Symbol of the NFT
-  attributes: Array<Attribute>;          // Array of attributes for the NFT
+  symbol?: string;                       // Symbol of the NFT
+  attributes?: Array<Attribute>;         // Array of attributes for the NFT
   creator?: string;                      // Optional creator information
-  isLimitedEdition: boolean;             // Checkbox for limited edition
+  isLimitedEdition?: boolean;            // Checkbox for limited edition
   totalEditions?: number;                // Total editions, optional when not limited edition
   editionNumber?: number;                // Edition number, optional when not limited edition
-  royalty: number;                       // Royalty percentage (0 to 100)
-  tags: string[];                        // Array of tags
+  royalty?: number;                      // Royalty percentage (0 to 100)
+  tags?: string[];                       // Array of tags
   license?: string;                      // Optional license information
   externalLink?: string;                 // Optional external link
-  creationTimestampToggle: boolean;      // Toggle for including timestamp
-  creationTimestamp: string;             // Timestamp in ISO format (optional)
+  creationTimestampToggle?: boolean;     // Toggle for including timestamp
+  creationTimestamp?: string;            // Timestamp in ISO format (optional)
 }
 export interface Attribute {
   type: string;                         // Type of the attribute (e.g., Color)

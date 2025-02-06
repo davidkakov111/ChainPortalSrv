@@ -31,6 +31,19 @@ export class JobProcessor {
     const newPayment = await this.wsJobProcessorNewTransactionValidator(wsClientEmitError, data.paymentTxSignature);
     if (!newPayment) return;
 
+    // Ensure the metadata is valid
+    const metadataValidation = this.solanaHelpersSrv.validateNFTMetadata(data.NftMetadata);
+    if (!metadataValidation.success) {
+      // Redirect the payment bc the metadata is invalid
+      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'NFT');
+      if (redirect.isValid) {
+        wsClientEmitError({id: 0, errorMessage: `Provided NFT metadata is invalid: "${metadataValidation.error}" so your payment was redirected after deducting the estimated refund fee. Please try again.`});
+      } else {
+        wsClientEmitError({id: 0, errorMessage: `Provided NFT metadata is invalid: "${metadataValidation.error}". Your payment was redirected but maybe failed: "${redirect.message}". Please try again.`});
+      } 
+      return;
+    }
+
     // Try to calculate the NFT mint fees, according to the metadata size
     const mintFees: blockchainFees | undefined = await this.wsJobProcessorNftMintFeesCalculator(wsClientEmitError, data);
     if (!mintFees) return;

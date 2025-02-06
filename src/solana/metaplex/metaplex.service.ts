@@ -72,13 +72,13 @@ export class MetaplexService {
             description: metadataObject.description,
             image: fileUploadResult.fileUri, 
             ...(metadataObject.symbol && { symbol: metadataObject.symbol }),
-            ...(metadataObject.attributes.length && { attributes: metadataObject.attributes.map(({ type, value }) => ({trait_type: type, value}))}),
+            ...(metadataObject.attributes?.length && { attributes: metadataObject.attributes.map(({ type, value }) => ({trait_type: type, value}))}),
             ...(metadataObject.creator && { creator: metadataObject.creator }),
             ...(metadataObject.isLimitedEdition && { isLimitedEdition: metadataObject.isLimitedEdition }),
             ...(metadataObject.totalEditions && { totalEditions: metadataObject.totalEditions }),
             ...(metadataObject.editionNumber && { editionNumber: metadataObject.editionNumber }),
             ...(metadataObject.royalty && { royalty: metadataObject.royalty }),
-            ...(metadataObject.tags.length && { tags: metadataObject.tags }),
+            ...(metadataObject.tags?.length && { tags: metadataObject.tags }),
             ...(metadataObject.license && { license: metadataObject.license }),
             ...(metadataObject.externalLink && { external_url: metadataObject.externalLink }),
             ...(metadataObject.creationTimestampToggle && { creationTimestamp: metadataObject.creationTimestamp }),
@@ -181,7 +181,7 @@ export class MetaplexService {
                 owner: publicKey(toPubkey),
                 plugins: [{
                     type: 'Royalties',
-                    basisPoints: (royalty >= 0 && royalty <= 100) ? Math.round(royalty * 100) : 0,
+                    basisPoints: (royalty && (royalty >= 0 && royalty <= 100)) ? Math.round(royalty * 100) : 0,
                     creators: [{address: publicKey(toPubkey), percentage: 100}],
                     ruleSet: ruleSet('None')
                 }, {
