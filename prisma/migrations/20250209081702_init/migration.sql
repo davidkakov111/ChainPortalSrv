@@ -1,5 +1,22 @@
 -- CreateEnum
+CREATE TYPE "AssetType" AS ENUM ('NFT', 'Token');
+
+-- CreateEnum
 CREATE TYPE "OperationType" AS ENUM ('mint', 'bridge');
+
+-- CreateEnum
+CREATE TYPE "Bchain" AS ENUM ('ETH', 'SOL', 'BSC', 'MATIC', 'ADA', 'XTZ', 'AVAX', 'FLOW', 'FTM', 'ALGO');
+
+-- CreateTable
+CREATE TABLE "MintingFee" (
+    "id" SERIAL NOT NULL,
+    "assetType" "AssetType" NOT NULL,
+    "bchainSymbol" "Bchain" NOT NULL,
+    "fee" DECIMAL(65,30) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "MintingFee_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "MainTxHistory" (
@@ -24,6 +41,15 @@ CREATE TABLE "MintTxHistory" (
 
     CONSTRAINT "MintTxHistory_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MintingFee_assetType_bchainSymbol_key" ON "MintingFee"("assetType", "bchainSymbol");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MintTxHistory_mainTxHistoryId_key" ON "MintTxHistory"("mainTxHistoryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MintTxHistory_paymentTxSignature_key" ON "MintTxHistory"("paymentTxSignature");
 
 -- CreateIndex
 CREATE INDEX "MintTxHistory_mainTxHistoryId_idx" ON "MintTxHistory"("mainTxHistoryId");
