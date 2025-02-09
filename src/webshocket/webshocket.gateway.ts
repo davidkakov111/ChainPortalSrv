@@ -16,6 +16,7 @@ import { NftMetadata, TokenMetadata } from 'src/shared/interfaces';
 @WebSocketGateway({
   cors: {
     origin: ['http://localhost:4200', 'https://chainportal.vercel.app'], // TODO - Allow production origin also
+    methods: ['GET', 'POST'],
   },
   maxHttpBufferSize: 1e8, // 100 MB
   transports: ['websocket', 'polling'],  // Allow HTTP polling fallback
