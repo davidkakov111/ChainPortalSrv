@@ -15,7 +15,7 @@ import { NftMetadata, TokenMetadata } from 'src/shared/interfaces';
 // Webshocket gateway to handle websocket connections
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:4200'], // TODO - Allow production origin also
+    origin: ['http://localhost:4200', 'https://chainportal.vercel.app'], // TODO - Allow production origin also
   },
   maxHttpBufferSize: 1e8, // 100 MB
 })
