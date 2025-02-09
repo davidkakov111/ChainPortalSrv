@@ -11,13 +11,5 @@
       "src": "/(.*)",
       "dest": "/src/main.ts"
     }
-  ],
-  "build": {
-    "env": {
-      "DATABASE_URL": "@your-database-url"
-    },
-    "commands": [
-      "npx prisma generate"
-    ]
-  }
+  ]
 }
