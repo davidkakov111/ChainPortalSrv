@@ -18,6 +18,7 @@ import { NftMetadata, TokenMetadata } from 'src/shared/interfaces';
     origin: ['http://localhost:4200', 'https://chainportal.vercel.app'], // TODO - Allow production origin also
   },
   maxHttpBufferSize: 1e8, // 100 MB
+  transports: ['websocket', 'polling'],  // Allow HTTP polling fallback
 })
 export class WebshocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private jobProcessor: JobProcessor) {}
