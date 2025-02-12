@@ -87,4 +87,13 @@ model MintTxHistory {
   // Index for efficient queries (optional, but recommended)
   @@index([mainTxHistoryId])
 }
+
+// Table to store user feedback
+model Feedback {
+  id        Int      @id @default(autoincrement()) // Auto-incrementing unique ID 
+  rating    Int                                    // Required integer for rating (e.g., 1-5)
+  feedback  String?                                // Optional text field for user feedback
+  afterUse  Boolean  @default(false)               // Required flag, defaults to false, indicating if the feedback was submited after minting/bridgeing
+  ip        String?                                // Optional field to store IP address
+}
 // ---------------------------------- Tables ---------------------------------------------

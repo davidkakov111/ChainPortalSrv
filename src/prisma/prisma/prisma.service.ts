@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { feedback } from 'src/shared/interfaces';
 import { assetType, blockchainSymbols, rewardTxsType } from 'src/shared/types';
 
 @Injectable()
@@ -137,5 +138,13 @@ export class PrismaService
     
     // Return true if found in any table
     return !!mintTxExists; // || !!bridgeTxExists
+  }
+
+  // Save user feedback
+  async saveFeedback(feedback: feedback): Promise<'Invalid rating'|'Successfully saved'> {
+    if (feedback.rating > 5 || feedback.rating < 1) return 'Invalid rating';
+
+    await this.feedback.create({data: feedback});
+    return 'Successfully saved';
   }
 }

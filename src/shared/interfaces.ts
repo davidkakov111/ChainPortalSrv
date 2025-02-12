@@ -65,3 +65,10 @@ export interface TokenMetadata {
   mediaName: string;                     // Media file name
   mediaContentType: string;              // Media content type
 }
+
+export interface feedback {
+  rating: number, 
+  feedback: string, 
+  afterUse: boolean, 
+  ip: any
+}

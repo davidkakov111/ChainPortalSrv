@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { cliEnv, transaction } from './shared/interfaces';
+import { cliEnv, feedback, transaction } from './shared/interfaces';
 import { assetType, blockchainFees, blockchainSymbols, operationType } from './shared/types';
 import { PrismaService } from './prisma/prisma/prisma.service';
 import { MetaplexService } from './solana/metaplex/metaplex.service';
@@ -118,5 +118,24 @@ export class AppService {
           : [],
       })),
     };
+  }
+
+  // Save feedback 
+  async saveFeedback(feedbackData: feedback): Promise<any> {
+    if (!feedbackData.rating || feedbackData.rating > 5 || feedbackData.rating < 1) throw new HttpException('The rating should be between 5 and 1.', HttpStatus.BAD_REQUEST);
+    
+    // Save the feedback to the db
+    const result = await this.prismaSrv.saveFeedback({
+      afterUse: feedbackData.afterUse ? true : false,
+      feedback: feedbackData.feedback ? feedbackData.feedback : '',
+      rating: Math.round(feedbackData.rating),
+      ip: feedbackData.ip ? String(feedbackData.ip) : ''
+    });
+    
+    if (result === 'Successfully saved') {
+      return {message: "Thank you!"};
+    } else {
+      throw new HttpException('The rating should be between 5 and 1.', HttpStatus.BAD_REQUEST);
+    }
   }
 }

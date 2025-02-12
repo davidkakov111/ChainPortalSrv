@@ -1,7 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { assetType, blockchainFees, blockchainSymbols } from './shared/types';
-import { transaction } from './shared/interfaces';
+import { feedback, transaction } from './shared/interfaces';
 
 @Controller()
 export class AppController {
@@ -34,5 +34,11 @@ export class AppController {
   @Get('tx-details')
   async getTxDetails(@Query('txId') txId: number): Promise<transaction> {
     return this.appSrv.getTxDetails(Number(txId));
+  }
+
+  // Handle feedback submission
+  @Post('submit-feedback')
+  async submitFeedback(@Body() feedbackData: feedback): Promise<any> {
+    return this.appSrv.saveFeedback(feedbackData);
   }
 }
