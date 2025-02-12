@@ -95,6 +95,6 @@ model Feedback {
   feedback  String?                                // Optional text field for user feedback
   afterUse  Boolean  @default(false)               // Required flag, defaults to false, indicating if the feedback was submited after minting/bridgeing
   ip        String?                                // Optional field to store IP address
-  date            DateTime   @default(now())             // Transaction date (default: current time)
+  date      DateTime   @default(now())             // Transaction date (default: current time)
 }
 // ---------------------------------- Tables ---------------------------------------------
