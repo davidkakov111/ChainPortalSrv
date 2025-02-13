@@ -29,7 +29,7 @@ jobs:
             # Check if the repo exists by looking for .git
             if [ ! -d "/home/root/chainportal/srv/.git" ]; then
               echo "Repository doesn't exist. Cleaning folder and cloning..."
-              rm -rf /home/root/chainportal/srv/* # Remove all files if no .git exists
+              rm -rf /home/root/chainportal/srv # Remove the folder if no .git exists
               git clone git@github.com:davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
             else
               echo "Repository exists. Pulling latest changes..."
