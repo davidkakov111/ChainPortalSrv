@@ -46,7 +46,6 @@ jobs:
           
       - name: Transfer .env file
         run: |
-          # echo "cli_environment=${{ secrets.cli_environment }}" > .env
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
           echo "solanaDevBase58PrivateKey=${{ secrets.solanaDevBase58PrivateKey }}" >> .env
           echo "solanaBase58PrivateKey=${{ secrets.solanaBase58PrivateKey }}" >> .env
