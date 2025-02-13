@@ -25,7 +25,7 @@ jobs:
       # Deploy Application
       - name: Deploy Application
         run: |
-          ssh root@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh -T root@${{ secrets.SERVER_IP }} << 'EOF'
             # Check if the repo exists by looking for .git
             if [ ! -d "/home/root/chainportal/srv/.git" ]; then
               echo "Repository doesn't exist. Cleaning folder and cloning..."
@@ -50,7 +50,7 @@ jobs:
 
       - name: Start Docker
         run: |
-          ssh root@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh -T root@${{ secrets.SERVER_IP }} << 'EOF'
             # Navigate to repo directory and run deployment commands
             cd /home/root/chainportal/srv
             docker compose down
