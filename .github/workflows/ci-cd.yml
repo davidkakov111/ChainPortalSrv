@@ -31,7 +31,7 @@ jobs:
               echo "Repository doesn't exist. Cleaning folder and cloning..."
               rm -rf /home/root/chainportal/srv # Remove the folder if no .git exists
               # Clone the repo with the GitHub token for authentication
-              git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
+              git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
             else
               echo "Repository exists. Pulling latest changes..."
               cd /home/root/chainportal/srv && git pull origin main
