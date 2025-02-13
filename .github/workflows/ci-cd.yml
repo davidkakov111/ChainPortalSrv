@@ -46,7 +46,14 @@ jobs:
           
       - name: Transfer .env file
         run: |
-          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+          echo "cli_environment=${{ secrets.cli_environment }}" > .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "solanaDevBase58PrivateKey=${{ secrets.solanaDevBase58PrivateKey }}" >> .env
+          echo "solanaBase58PrivateKey=${{ secrets.solanaBase58PrivateKey }}" >> .env
+          echo "CHAIN_PORTAL_SOL_NFT_MINT_FEE=${{ secrets.CHAIN_PORTAL_SOL_NFT_MINT_FEE }}" >> .env
+          echo "CHAIN_PORTAL_SOL_TOKEN_MINT_FEE=${{ secrets.CHAIN_PORTAL_SOL_TOKEN_MINT_FEE }}" >> .env
+          echo "SOL_NFT_MINT_FEE=${{ secrets.SOL_NFT_MINT_FEE }}" >> .env
+          echo "SOL_TOKEN_MINT_FEE=${{ secrets.SOL_TOKEN_MINT_FEE }}" >> .env
           scp .env root@${{ secrets.SERVER_IP }}:/home/root/chainportal/srv/.env
 
       - name: Start Docker
