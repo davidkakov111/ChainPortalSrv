@@ -1,0 +1,48 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main  # Trigger only on push to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Check out the repository
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+
+      # Set up SSH keys for server access
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      # Transfer the .env file to the server
+      - name: Transfer .env file
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+          scp .env root@${{ secrets.SERVER_IP }}:/home/root/chainportal/srv/.env
+
+      # Check if the repo exists, if not, clone it
+      - name: Deploy Application
+        run: |
+          ssh root@${{ secrets.SERVER_IP }} << 'EOF'
+            if [ ! -d "/home/root/chainportal/srv" ]; then
+              echo "Repository doesn't exist. Cloning..."
+              git clone git@github.com:davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
+            else
+              echo "Repository exists. Pulling latest changes..."
+              cd /home/root/chainportal/srv && git pull origin main
+            fi
+            # Navigate to repo directory
+            cd /home/root/chainportal/srv
+
+            # Run your deployment commands here (e.g., docker-compose, npm install, etc.)
+            docker-compose down
+            docker-compose up -d --build
+          EOF
