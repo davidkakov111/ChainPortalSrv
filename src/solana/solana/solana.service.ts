@@ -19,6 +19,12 @@ export class SolanaService {
     ) {
         // Initialize connection to the Solana cluster
         const strCliEnv = this.configSrv.get<string>('cli_environment');
+
+        console.log("___________________________________________________________________________________________________________________")
+        console.log('JSON Input cli env:', strCliEnv);
+        console.log("___________________________________________________________________________________________________________________")
+
+
         this.cliEnv = JSON.parse(strCliEnv) as cliEnv;
         this.connection = new Connection(clusterApiUrl(this.cliEnv.blockchainNetworks.solana.selected === 'devnet' ? 'devnet' : 'mainnet-beta'));
     }

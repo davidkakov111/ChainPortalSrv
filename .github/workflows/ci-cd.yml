@@ -67,3 +67,5 @@ jobs:
             docker compose down
             docker compose up -d --build
           EOF
+docker logs srv-chain-portal-1
+docker logs srv-postgres-1
