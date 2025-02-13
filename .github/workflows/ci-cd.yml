@@ -26,15 +26,12 @@ jobs:
       - name: Deploy Application
         run: |
           ssh -T root@${{ secrets.SERVER_IP }} << 'EOF'
-            # Set up Git credentials for cloning the private repo
-            git config --global credential.helper store
-            echo "https://${{ secrets.GITHUB_TOKEN }}:@github.com" > ~/.git-credentials
-
             # Check if the repo exists by looking for .git
             if [ ! -d "/home/root/chainportal/srv/.git" ]; then
               echo "Repository doesn't exist. Cleaning folder and cloning..."
               rm -rf /home/root/chainportal/srv # Remove the folder if no .git exists
-              git clone https://github.com/davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
+              # Clone the repo with the GitHub token for authentication
+              git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
             else
               echo "Repository exists. Pulling latest changes..."
               cd /home/root/chainportal/srv && git pull origin main
