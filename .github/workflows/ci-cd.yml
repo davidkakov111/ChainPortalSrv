@@ -22,28 +22,37 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
-      # Transfer the .env file to the server
-      - name: Transfer .env file
-        run: |
-          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
-          ssh root@${{ secrets.SERVER_IP }} "rm -f /home/root/chainportal/srv/.env" # Delete existing .env if it exists
-          scp .env root@${{ secrets.SERVER_IP }}:/home/root/chainportal/srv/.env
-
-      # Check if the repo exists, if not, clone it
+      # Deploy Application
       - name: Deploy Application
         run: |
           ssh root@${{ secrets.SERVER_IP }} << 'EOF'
+            # Check if the repo exists by looking for .git
             if [ ! -d "/home/root/chainportal/srv/.git" ]; then
-              echo "Repository doesn't exist. Cloning..."
+              echo "Repository doesn't exist. Cleaning folder and cloning..."
+              rm -rf /home/root/chainportal/srv/* # Remove all files if no .git exists
               git clone git@github.com:davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
             else
               echo "Repository exists. Pulling latest changes..."
               cd /home/root/chainportal/srv && git pull origin main
             fi
+            
             # Navigate to repo directory
             cd /home/root/chainportal/srv
+            
+            # Remove existing .env and upload the new one
+            rm -f .env
+          EOF
+          
+      - name: Transfer .env file
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+          scp .env root@${{ secrets.SERVER_IP }}:/home/root/chainportal/srv/.env
 
-            # Run your deployment commands here (e.g., docker compose, npm install, etc.)
+      - name: Start Docker
+        run: |
+          ssh root@${{ secrets.SERVER_IP }} << 'EOF'
+            # Navigate to repo directory and run deployment commands
+            cd /home/root/chainportal/srv
             docker compose down
             docker compose up -d --build
           EOF
