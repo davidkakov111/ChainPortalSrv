@@ -88,6 +88,13 @@ model MintTxHistory {
   @@index([mainTxHistoryId])
 }
 
+// Table to store in progress transactions to awoid processing the same payment multiple times
+model InProgressTransactions {
+  id                   Int      @id @default(autoincrement()) // Auto-incrementing unique ID
+  paymentTxSignature   String   @unique                       // Unique signature
+  createdAt            DateTime @default(now())               // Timestamp for cleanup
+}
+
 // Table to store user feedback
 model Feedback {
   id        Int      @id @default(autoincrement()) // Auto-incrementing unique ID 

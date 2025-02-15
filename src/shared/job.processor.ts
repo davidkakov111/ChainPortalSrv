@@ -148,6 +148,11 @@ export class JobProcessor {
         wsClientEmitError({id: 0, errorMessage: 'Your payment transaction has already been used. Please try again.'});
         return false;
       }
+      const paymentInProgress = await this.prismaService.paymentInProgress(paymentTxSignature);
+      if (paymentInProgress) {
+        wsClientEmitError({id: 0, errorMessage: 'Your payment transaction is already being processed. Please try again.'});
+        return false;
+      }
       return true;
     } catch (error) {
       console.error('Failed to check if payment transaction (', paymentTxSignature, ') signature is used:', error);

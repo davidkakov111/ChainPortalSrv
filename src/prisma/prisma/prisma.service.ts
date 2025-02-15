@@ -140,6 +140,33 @@ export class PrismaService
     return !!mintTxExists; // || !!bridgeTxExists
   }
 
+  // Check if payment transaction is currently processing or not and update the table accordingly
+  async paymentInProgress(paymentTxSignature: string) {
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1); // Get the timestamp of 24 hours ago
+  
+    const result = await this.$transaction(async (tx) => {
+      // Delete records older than 1 day
+      await tx.inProgressTransactions.deleteMany({
+        where: { createdAt: { lt: oneDayAgo } },
+      });
+  
+      // Check if the transaction signature already exists
+      const existingTransaction = await tx.inProgressTransactions.findUnique({
+        where: { paymentTxSignature },
+      });
+      if (existingTransaction) return true;
+  
+      // Otherwise, insert the transaction signature as "processing"
+      await tx.inProgressTransactions.create({
+        data: { paymentTxSignature },
+      });
+  
+      return false;
+    });
+    return result;
+  }
+
   // Save user feedback
   async saveFeedback(feedback: feedback): Promise<'Invalid rating'|'Successfully saved'> {
     if (feedback.rating > 5 || feedback.rating < 1) return 'Invalid rating';
