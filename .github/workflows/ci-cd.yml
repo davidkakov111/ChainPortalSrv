@@ -34,7 +34,10 @@ jobs:
               git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/davidkakov111/ChainPortalSrv.git /home/root/chainportal/srv
             else
               echo "Repository exists. Pulling latest changes..."
-              cd /home/root/chainportal/srv && git pull origin main
+              cd /home/root/chainportal/srv
+              git config user.email "github-actions@github.com"
+              git config user.name "github-actions"
+              git pull https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/davidkakov111/ChainPortalSRV.git main
             fi
             
             # Navigate to repo directory
