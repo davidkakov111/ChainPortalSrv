@@ -6,6 +6,9 @@ export interface cliEnv {
     solana: {
       selected: 'devnet'|'mainnet'
     }, 
+    ethereum: {
+      selected: 'devnet'|'mainnet'
+    }, 
   },
 }
 

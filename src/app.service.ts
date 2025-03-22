@@ -26,6 +26,9 @@ export class AppService {
     // Attach Chainportal pubkeys to the client environemnt variables 
     const solPubkey = this.solHelpersSrv.getChainPortalKeypair(null, cliEnv as cliEnv).publicKey;
     cliEnv.blockchainNetworks.solana.pubKey = solPubkey;
+    // TODO - Calculate and attach the ethereum pubkey
+    // const solPubkey = this.solHelpersSrv.getChainPortalKeypair(null, cliEnv as cliEnv).publicKey;
+    cliEnv.blockchainNetworks.ethereum.pubKey = 'Need to calculate properly';
 
     // TODO - Attach another suported blockchain pubkeys later
 
