@@ -53,24 +53,25 @@ export class AppService {
     // Calculate & save the fees for the rest blockchains with ChainPortal fees
     for (let i of blockchainSymbols) {
       if (i === "SOL") {
-        // TODO - It would be better to calculate them dynamically, but I haven't figured out how to do it for NFT minting yet.
-        // ChainPortal & On chain fees
-        if (assetType === "NFT") {
-          result.SOL = parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_NFT_MINT_FEE'));
-          result.SOL += parseFloat(this.configSrv.get<string>('SOL_NFT_MINT_FEE'));
-        } else if (assetType === "Token") {
-          result.SOL = parseFloat(this.configSrv.get<string>('CHAIN_PORTAL_SOL_TOKEN_MINT_FEE'));
-          result.SOL += parseFloat(this.configSrv.get<string>('SOL_TOKEN_MINT_FEE'));
-        }
+        result.SOL = parseFloat(this.configSrv.get<string>(`CHAIN_PORTAL_SOL_${assetType.toUpperCase()}_MINT_FEE`));
+        // TODO - It would be better to calculate the minting dynamically on Solana.
+        result.SOL += parseFloat(this.configSrv.get<string>(`SOL_${assetType.toUpperCase()}_MINT_FEE`));
 
-        await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);        
+        await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);
+      } else if (i === "ETH") {
+        result.ETH = parseFloat(this.configSrv.get<string>(`CHAIN_PORTAL_ETH_${assetType.toUpperCase()}_MINT_FEE`));  
+        // TODO - Calculate the minting fees dynamically on ethereum.
+        
+        // await this.prismaSrv.upsertMintingFee(assetType, 'ETH', result.ETH);
       } // TODO - Need to add options for another suported bchains later
     }
 
     // Calculate & assign the metadata upload costs
     if (result.SOL) {
-      const metadataUploadFee = await this.metaplexSrv.calcArweaveMetadataUploadFee(metadataByteSize);
-      result.SOL += metadataUploadFee;
+      result.SOL += await this.metaplexSrv.calcArweaveMetadataUploadFee(metadataByteSize);
+    } else if (result.ETH) {
+      // TODO Calcualate metadata upload cost on ethereum
+      result.ETH += 0;
     } // TODO - Need to add options for another suported bchains later
 
     // Round up the fees to 4 decimals
