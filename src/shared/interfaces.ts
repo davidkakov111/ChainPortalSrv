@@ -7,7 +7,7 @@ export interface cliEnv {
       selected: 'devnet'|'mainnet'
     }, 
     ethereum: {
-      selected: 'devnet'|'mainnet'
+      selected: 'sepolia'|'mainnet'
     }, 
   },
 }

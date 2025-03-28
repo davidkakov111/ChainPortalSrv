@@ -6,7 +6,6 @@ import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
-import { SolanaHelpersService } from 'src/solana/solana-helpers/solana-helpers.service';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -16,7 +15,6 @@ export class JobProcessor {
     private readonly appSrv: AppService,
     private readonly helperSrv: HelperService,
     private readonly solanaService: SolanaService,
-    private readonly solanaHelpersSrv: SolanaHelpersService,
     private readonly prismaService: PrismaService,
     private readonly metaplexSrv: MetaplexService,
   ) {}
@@ -32,7 +30,7 @@ export class JobProcessor {
     if (!newPayment) return;
 
     // Ensure the metadata is valid
-    const metadataValidation = this.solanaHelpersSrv.validateNFTMetadata(data.NftMetadata);
+    const metadataValidation = this.helperSrv.validateNFTMetadata(data.NftMetadata);
     if (!metadataValidation.success) {
       // Redirect the payment bc the metadata is invalid
       const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'NFT');
@@ -91,7 +89,7 @@ export class JobProcessor {
     if (!newPayment) return;
 
     // Ensure the metadata is valid
-    const metadataValidation = this.solanaHelpersSrv.validateTokenMetadata(data.TokenMetadata);
+    const metadataValidation = this.helperSrv.validateTokenMetadata(data.TokenMetadata);
     if (!metadataValidation.success) {
       // Redirect the payment bc the metadata is invalid
       const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'Token');

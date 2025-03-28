@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { HelperModule } from './shared/helper/helper.module';
 import { WebshocketGateway } from './webshocket/webshocket.gateway';
 import { JobProcessor } from './shared/job.processor';
+import { EthereumModule } from './ethereum/ethereum.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { JobProcessor } from './shared/job.processor';
     SolanaModule,
     PrismaModule,
     HelperModule,
+    EthereumModule,
   ],
   controllers: [AppController],
   providers: [AppService, WebshocketGateway, JobProcessor],

@@ -7,6 +7,7 @@ import { MetaplexService } from './solana/metaplex/metaplex.service';
 import { HelperService } from './shared/helper/helper/helper.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { SolanaHelpersService } from './solana/solana-helpers/solana-helpers.service';
+import { EthereumHelpersService } from './ethereum/ethereum-helpers/ethereum-helpers.service';
 
 @Injectable()
 export class AppService {
@@ -15,7 +16,8 @@ export class AppService {
     private readonly prismaSrv: PrismaService,
     private readonly metaplexSrv: MetaplexService,
     private readonly helperSrv: HelperService,
-    private readonly solHelpersSrv: SolanaHelpersService
+    private readonly solHelpersSrv: SolanaHelpersService,
+    private readonly ethHelpersSrv: EthereumHelpersService,
   ) {}
 
   // Return client environment variables
@@ -24,12 +26,13 @@ export class AppService {
     const cliEnv = JSON.parse(strCliEnv);
     
     // Attach Chainportal pubkeys to the client environemnt variables 
+    // SOL
     const solPubkey = this.solHelpersSrv.getChainPortalKeypair(null, cliEnv as cliEnv).publicKey;
     cliEnv.blockchainNetworks.solana.pubKey = solPubkey;
-    // TODO - Calculate and attach the ethereum pubkey
-    // const solPubkey = this.solHelpersSrv.getChainPortalKeypair(null, cliEnv as cliEnv).publicKey;
-    cliEnv.blockchainNetworks.ethereum.pubKey = 'Need to calculate properly';
-
+    // ETH
+    const ethPubkey = this.ethHelpersSrv.getChainPortalWallet(null, cliEnv as cliEnv).address;
+    cliEnv.blockchainNetworks.ethereum.pubKey = ethPubkey;
+    
     // TODO - Attach another suported blockchain pubkeys later
 
     return cliEnv;
