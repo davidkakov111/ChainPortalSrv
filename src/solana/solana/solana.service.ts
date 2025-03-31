@@ -203,7 +203,7 @@ export class SolanaService {
             }
 
             // Save the transaction to the db
-            this.prismaSrv.saveMintTxHistory({
+            await this.prismaSrv.saveMintTxHistory({
                 assetType: assetType,
                 blockchain: 'SOL',
                 paymentPubKey: pubkey.toString(),
@@ -219,7 +219,7 @@ export class SolanaService {
             console.error('Refund of the user\'s transaction ('+ insuficientPaymentTxSignature +') failed: ', refundObj.error);
 
             // Save the transaction to the db
-            this.prismaSrv.saveMintTxHistory({
+            await this.prismaSrv.saveMintTxHistory({
                 assetType: assetType,
                 blockchain: 'SOL',
                 paymentPubKey: pubkey.toString(),
