@@ -6,6 +6,7 @@ import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
+import { EthereumService } from 'src/ethereum/ethereum/ethereum/ethereum.service';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -17,6 +18,7 @@ export class JobProcessor {
     private readonly solanaService: SolanaService,
     private readonly prismaService: PrismaService,
     private readonly metaplexSrv: MetaplexService,
+    private readonly ethereumSrv: EthereumService,
   ) {}
 
   // NFT minting job
@@ -33,7 +35,16 @@ export class JobProcessor {
     const metadataValidation = this.helperSrv.validateNFTMetadata(data.NftMetadata);
     if (!metadataValidation.success) {
       // Redirect the payment bc the metadata is invalid
-      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'NFT');
+      let redirect: {
+        isValid: boolean;
+        message?: string;
+      };
+      if (data.bChainSymbol === 'SOL') {
+        redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'NFT');
+      } else if (data.bChainSymbol === 'ETH') {
+        redirect = await this.ethereumSrv.redirectEthPayment(data.paymentTxSignature, 'NFT');
+      } // TODO - Integrate other bchains later
+
       if (redirect.isValid) {
         wsClientEmitError({id: 0, errorMessage: `Provided NFT metadata is invalid: "${metadataValidation.error}" so your payment was redirected after deducting the estimated refund fee. Please try again.`});
       } else {
