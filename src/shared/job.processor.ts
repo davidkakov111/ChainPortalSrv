@@ -83,6 +83,50 @@ export class JobProcessor {
         wsClientEmitError({id: -1, errorMessage: 'Solana NFT minting failed. Please try again.'});
         return;
       }
+    } else if (data.bChainSymbol === 'ETH') {
+      try {
+        // ------------------ Payment transaction validation ------------------
+        const validation = await this.ethereumSrv.validateEthPaymentTx(data.paymentTxSignature, mintFees.ETH, 'NFT');
+        if (!validation.isValid) {wsClientEmitError({id: 0, errorMessage: validation.errorMessage}); return;}
+        wsClientEmit({id: 0, txId: null});
+        // ------------------ Payment transaction validation ------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // ------------------ Metadata upload ---------------------------------
+        // const metadataUploadResult = await this.metaplexSrv.uploadNFTMetadataToArweave(data.NftMetadata, mintFees.SOL, data.paymentTxSignature);
+        // if (!metadataUploadResult.successful) {wsClientEmitError({id: 1, errorMessage: metadataUploadResult.uri}); return;}
+        // wsClientEmit({id: 1, txId: null});
+        // ------------------ Metadata upload ---------------------------------
+     
+        // ------------------ Mint the NFT ------------------------------------
+        // const minted = await this.metaplexSrv.mintSolNFT(validation.senderPubkey, validation.recipientBalanceChange, metadataUploadResult.uri, 
+        //   data.NftMetadata.title, data.NftMetadata.royalty, data.NftMetadata.attributes, mintFees.SOL, data.paymentTxSignature);
+        // if (!minted.successful) {wsClientEmitError({id: 2, errorMessage: minted.txId}); return;}
+        // wsClientEmit({id: 2, txId: minted.txId});
+        // ------------------ Mint the NFT ------------------------------------
+      } catch (error) {
+        console.error('Ethereum NFT minting job failed:', error);
+        wsClientEmitError({id: -1, errorMessage: 'Ethereum NFT minting failed. Please try again.'});
+        return;
+      }
     } else {
       // TODO - Add support for other blockchains later
       wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for NFT minting. Please use a different blockchain'});
@@ -182,7 +226,16 @@ export class JobProcessor {
       return mintFees;
     } catch (error) {
       // Redirect the payment if some error occurs
-      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'NFT');
+      let redirect: {
+        isValid: boolean, 
+        message?: string
+      };
+      if (data.bChainSymbol === 'SOL') {
+        redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'NFT');
+      } else if (data.bChainSymbol === 'ETH') {
+        redirect = await this.ethereumSrv.redirectEthPayment(data.paymentTxSignature, 'NFT');
+      } // TODO - Add other blockchains later
+
       if (redirect.isValid) {
         wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the NFT minting fees so your payment was redirected after deducting the estimated refund fee. Please try again.'});
       } else {

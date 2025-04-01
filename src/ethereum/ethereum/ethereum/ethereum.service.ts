@@ -182,4 +182,58 @@ export class EthereumService {
             return {success: false, ethFee: Infinity};
         }
     }
+
+    // Validate payment transaction by transaction signature
+    async validateEthPaymentTx(paymentTxSignature: string, requiredEthPaymentAmount: number, assetType: assetType): Promise<{
+        isValid: boolean, errorMessage?: string, senderPubkey?: string, receivedEthAmount?: number
+    }> {
+        // Get transaction details by transaction signature after at least 4 confirmation
+        const txDetails = await this.txDetailsAfterConfirmation(paymentTxSignature);
+        if (!txDetails.success) return {isValid: false, errorMessage: txDetails.error};
+        const sentEthAmount = parseFloat(txDetails.txDetails.value ? formatEther(txDetails.txDetails.value) : "0");
+        const recipent = txDetails.txDetails.to;
+        const sender = txDetails.txDetails.from;
+
+        // Ensure the transaction was sent to ChainPortal
+        const cpWallet = this.ethereumHelpersSrv.getChainPortalWallet('', this.cliEnv);
+        if (recipent !== cpWallet.address) return {isValid: false, errorMessage: 'The recipient of the payment transaction is incorrect.'};
+
+        // Refund the user, bc coudnt calculate the total price for their operation
+        if (!requiredEthPaymentAmount) {
+            // Get the current estimated fee for an ETH transfer transaction (for this refund)
+            const feeResult = await this.estimateEthTransferFee();
+            if (!feeResult.success) return {isValid: false, errorMessage: 'Couldn\'t calculate the fee required for the refund transaction. Please try again.'};
+
+            // If the received amount is enough for at least the refund fee then refund
+            if (sentEthAmount > feeResult.ethFee) {
+                // This function also deducts the estimated refund fee
+                const refundObj = await this.refundInEth(sender, sentEthAmount, sentEthAmount, paymentTxSignature, 
+                    assetType, feeResult.ethFee, feeResult.feeData);
+                return {isValid: false, errorMessage: refundObj.message};
+            } else {
+                console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough ETH, even for refund. I also coudn\'t calculate the total price for their operation. Expected: ', requiredEthPaymentAmount, 'Received: ', sentEthAmount);
+                return {isValid: false, errorMessage: "Your transaction did not transfer ETH. Please try again."};
+            }
+        }
+
+        // Ensure the payment amount is enough
+        if (sentEthAmount < requiredEthPaymentAmount) {
+            // Get the current estimated fee for an ETH transfer transaction (for this refund)
+            const feeResult = await this.estimateEthTransferFee();
+            if (!feeResult.success) return {isValid: false, errorMessage: 'Your payment amount is insufficient, and couldn\'t process your refund because the required transaction fee couldn\'t be calculated. Please try again.'};
+
+            if (sentEthAmount > feeResult.ethFee) {
+                // Refund the user, bc their transaction did not transfer enough ETH for their operation, but it's enough for the refund. 
+                // (this function also deducts the estimated refund fee)
+                const refundObj = await this.refundInEth(sender, sentEthAmount, sentEthAmount, paymentTxSignature, 
+                    assetType, feeResult.ethFee, feeResult.feeData);
+                return {isValid: false, errorMessage: refundObj.message};
+            } else {
+                console.error('The users transaction ('+ paymentTxSignature +') did not transfer enough ETH, even for refund. Expected: ', requiredEthPaymentAmount, 'Received: ', sentEthAmount);
+                return {isValid: false, errorMessage: "Your transaction did not transfer ETH. Please try again."};
+            }
+        }
+
+        return {isValid: true, senderPubkey: sender, receivedEthAmount: sentEthAmount};
+    }
 }
