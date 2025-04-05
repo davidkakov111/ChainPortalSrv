@@ -7,6 +7,7 @@ import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
 import { EthereumService } from 'src/ethereum/ethereum/ethereum/ethereum.service';
+import { ThirdwebService } from 'src/ethereum/thirdweb/thirdweb.service';
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -19,6 +20,7 @@ export class JobProcessor {
     private readonly prismaService: PrismaService,
     private readonly metaplexSrv: MetaplexService,
     private readonly ethereumSrv: EthereumService,
+    private readonly thirdwebSrv: ThirdwebService,
   ) {}
 
   // NFT minting job
@@ -91,30 +93,18 @@ export class JobProcessor {
         wsClientEmit({id: 0, txId: null});
         // ------------------ Payment transaction validation ------------------
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         // ------------------ Metadata upload ---------------------------------
-        // const metadataUploadResult = await this.metaplexSrv.uploadNFTMetadataToArweave(data.NftMetadata, mintFees.SOL, data.paymentTxSignature);
-        // if (!metadataUploadResult.successful) {wsClientEmitError({id: 1, errorMessage: metadataUploadResult.uri}); return;}
-        // wsClientEmit({id: 1, txId: null});
+        const metadataUploadResult = await this.thirdwebSrv.uploadNFTMetadataToIPFS(data.NftMetadata, data.paymentTxSignature);
+        if (!metadataUploadResult.successful) {wsClientEmitError({id: 1, errorMessage: metadataUploadResult.url}); return;}
+        wsClientEmit({id: 1, txId: null});
         // ------------------ Metadata upload ---------------------------------
+
+
+
+
+
+
+
      
         // ------------------ Mint the NFT ------------------------------------
         // const minted = await this.metaplexSrv.mintSolNFT(validation.senderPubkey, validation.recipientBalanceChange, metadataUploadResult.uri, 

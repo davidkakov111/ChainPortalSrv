@@ -27,7 +27,10 @@ export class EthereumHelpersService {
             hexPrivateKey = this.configSrv.get<string>(PrivateKey);
         }
 
-        const wallet = new ethers.Wallet(hexPrivateKey);
+        const wallet = new ethers.Wallet(
+            hexPrivateKey, 
+            ethers.getDefaultProvider(cliEnv.blockchainNetworks.ethereum.selected)
+        );
         return wallet;
     }
 }
