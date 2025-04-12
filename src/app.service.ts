@@ -38,7 +38,7 @@ export class AppService {
     return cliEnv;
   }
 
-  // Return  mint fees based on blockchain and asset type
+  // Return  mint fees based on blockchain, asset type and metadata size
   async getMintFees(assetType: assetType, blockchainSymbols: blockchainSymbols[], metadataByteSize: number = 0): Promise<blockchainFees> {
     if (!["NFT", "Token"].includes(assetType) || !blockchainSymbols?.length) {
       throw new HttpException('Invalid request', HttpStatus.BAD_REQUEST);
@@ -60,15 +60,14 @@ export class AppService {
     for (let i of blockchainSymbols) {
       if (i === "SOL") {
         result.SOL = parseFloat(this.configSrv.get<string>(`CHAIN_PORTAL_SOL_${assetType.toUpperCase()}_MINT_FEE`));
-        // TODO - It would be better to calculate the minting dynamically on Solana.
         result.SOL += parseFloat(this.configSrv.get<string>(`SOL_${assetType.toUpperCase()}_MINT_FEE`));
 
         await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);
       } else if (i === "ETH") {
         result.ETH = parseFloat(this.configSrv.get<string>(`CHAIN_PORTAL_ETH_${assetType.toUpperCase()}_MINT_FEE`));  
-        // TODO - Calculate the minting fees dynamically on ethereum.
-        
-        // await this.prismaSrv.upsertMintingFee(assetType, 'ETH', result.ETH);
+        result.ETH += parseFloat(this.configSrv.get<string>(`ETH_${assetType.toUpperCase()}_MINT_FEE`));
+
+        await this.prismaSrv.upsertMintingFee(assetType, 'ETH', result.ETH);
       } // TODO - Need to add options for another suported bchains later
     }
 
@@ -76,7 +75,7 @@ export class AppService {
     if (result.SOL) {
       result.SOL += await this.metaplexSrv.calcArweaveMetadataUploadFee(metadataByteSize);
     } else if (result.ETH) {
-      // TODO Calcualate metadata upload cost on ethereum
+      // Uploading metadata to IPFS is currently free in ETH. In the future, there might be a small cost, but it can be ignored for now.
       result.ETH += 0;
     } // TODO - Need to add options for another suported bchains later
 
