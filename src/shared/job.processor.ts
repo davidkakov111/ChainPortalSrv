@@ -130,7 +130,16 @@ export class JobProcessor {
     const metadataValidation = this.helperSrv.validateTokenMetadata(data.TokenMetadata);
     if (!metadataValidation.success) {
       // Redirect the payment bc the metadata is invalid
-      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'Token');
+      let redirect: {
+        isValid: boolean;
+        message?: string;
+      };
+      if (data.bChainSymbol === 'SOL') {
+        redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'Token');
+      } else if (data.bChainSymbol === 'ETH') {
+        redirect = await this.ethereumSrv.redirectEthPayment(data.paymentTxSignature, 'Token');
+      } // TODO - Integrate other bchains later
+
       if (redirect.isValid) {
         wsClientEmitError({id: 0, errorMessage: `Provided token metadata is invalid: "${metadataValidation.error}" so your payment was redirected after deducting the estimated refund fee. Please try again.`});
       } else {
@@ -169,6 +178,22 @@ export class JobProcessor {
         wsClientEmitError({id: -1, errorMessage: 'Solana token minting failed. Please try again.'});
         return;
       }
+    } else if (data.bChainSymbol === 'ETH') {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     } else {
       // TODO - Add support for other blockchains later
       wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for token minting. Please use a different blockchain'});
@@ -245,7 +270,16 @@ export class JobProcessor {
       return mintFees;
     } catch (error) {
       // Redirect the payment if some error occurs
-      const redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'Token');
+      let redirect: {
+        isValid: boolean, 
+        message?: string
+      };
+      if (data.bChainSymbol === 'SOL') {
+        redirect = await this.solanaService.redirectSolPayment(data.paymentTxSignature, 'Token');
+      } else if (data.bChainSymbol === 'ETH') {
+        redirect = await this.ethereumSrv.redirectEthPayment(data.paymentTxSignature, 'Token');
+      } // TODO - Add other blockchains later
+
       if (redirect.isValid) {
         wsClientEmitError({id: 0, errorMessage: 'Unable to calculate the token minting fees so your payment was redirected after deducting the estimated refund fee. Please try again.'});
       } else {
