@@ -49,25 +49,25 @@ export class AppService {
 
     const result: blockchainFees = {};
 
+    // -------------------------- Currently there is no need to store the fees in db --------------------------------
     // Asign to the result the existing 'fresh' fees from db
-    const dbBchainFees = await this.prismaSrv.getMintingFees(assetType, blockchainSymbols);
-    for (let i of dbBchainFees) {
-      result[i.bchainSymbol] = Number(i.fee);
-      blockchainSymbols = blockchainSymbols.filter(symbol => symbol !== i.bchainSymbol);
-    }
+    // const dbBchainFees = await this.prismaSrv.getMintingFees(assetType, blockchainSymbols);
+    // for (let i of dbBchainFees) {
+    //   result[i.bchainSymbol] = Number(i.fee);
+    //   blockchainSymbols = blockchainSymbols.filter(symbol => symbol !== i.bchainSymbol);
+    // }
+    // ---------------------------------------------------------------------------------------------------------------
     
-    // Calculate & save the fees for the rest blockchains with ChainPortal fees
+    // Calculate the fees with ChainPortal fees
     for (let i of blockchainSymbols) {
       if (i === "SOL") {
         result.SOL = parseFloat(this.configSrv.get<string>(`CHAIN_PORTAL_SOL_${assetType.toUpperCase()}_MINT_FEE`));
         result.SOL += parseFloat(this.configSrv.get<string>(`SOL_${assetType.toUpperCase()}_MINT_FEE`));
-
-        await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);
+        // await this.prismaSrv.upsertMintingFee(assetType, 'SOL', result.SOL);
       } else if (i === "ETH") {
         result.ETH = parseFloat(this.configSrv.get<string>(`CHAIN_PORTAL_ETH_${assetType.toUpperCase()}_MINT_FEE`));  
         result.ETH += parseFloat(this.configSrv.get<string>(`ETH_${assetType.toUpperCase()}_MINT_FEE`));
-
-        await this.prismaSrv.upsertMintingFee(assetType, 'ETH', result.ETH);
+        // await this.prismaSrv.upsertMintingFee(assetType, 'ETH', result.ETH);
       } // TODO - Need to add options for another suported bchains later
     }
 
