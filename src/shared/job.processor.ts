@@ -6,7 +6,7 @@ import { AppService } from 'src/app.service';
 import { HelperService } from './helper/helper/helper.service';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
-import { EthereumService } from 'src/ethereum/ethereum/ethereum/ethereum.service';
+import { EthereumService } from 'src/ethereum/ethereum/ethereum.service';
 import { ThirdwebService } from 'src/ethereum/thirdweb/thirdweb.service';
 
 // Job processor to run codes in background, independent of the client connection
@@ -99,18 +99,11 @@ export class JobProcessor {
         wsClientEmit({id: 1, txId: null});
         // ------------------ Metadata upload ---------------------------------
 
-
-
-
-
-
-
-     
         // ------------------ Mint the NFT ------------------------------------
-        // const minted = await this.metaplexSrv.mintSolNFT(validation.senderPubkey, validation.recipientBalanceChange, metadataUploadResult.uri, 
-        //   data.NftMetadata.title, data.NftMetadata.royalty, data.NftMetadata.attributes, mintFees.SOL, data.paymentTxSignature);
-        // if (!minted.successful) {wsClientEmitError({id: 2, errorMessage: minted.txId}); return;}
-        // wsClientEmit({id: 2, txId: minted.txId});
+        const minted = await this.thirdwebSrv.mintEthNFT(validation.senderPubkey, 
+          validation.receivedEthAmount, metadataUploadResult.url, data.paymentTxSignature);
+        if (!minted.successful) {wsClientEmitError({id: 2, errorMessage: minted.txId}); return;}
+        wsClientEmit({id: 2, txId: minted.txId});
         // ------------------ Mint the NFT ------------------------------------
       } catch (error) {
         console.error('Ethereum NFT minting job failed:', error);
