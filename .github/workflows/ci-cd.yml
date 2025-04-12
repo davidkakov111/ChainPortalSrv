@@ -60,6 +60,15 @@ jobs:
           echo "CHAIN_PORTAL_SOL_TOKEN_MINT_FEE=${{ secrets.CHAIN_PORTAL_SOL_TOKEN_MINT_FEE }}" >> .env
           echo "SOL_NFT_MINT_FEE=${{ secrets.SOL_NFT_MINT_FEE }}" >> .env
           echo "SOL_TOKEN_MINT_FEE=${{ secrets.SOL_TOKEN_MINT_FEE }}" >> .env
+          echo "thirdweb_clinet_id=${{ secrets.thirdweb_clinet_id }}" >> .env
+          echo "thirdweb_secret_key=${{ secrets.thirdweb_secret_key }}" >> .env
+          echo "sepolia_thirdweb_nft_contract=${{ secrets.sepolia_thirdweb_nft_contract }}" >> .env
+          echo "mainnet_thirdweb_nft_contract=${{ secrets.mainnet_thirdweb_nft_contract }}" >> .env
+          echo "ethereumSepoliaHexPrivateKey=${{ secrets.ethereumSepoliaHexPrivateKey }}" >> .env
+          echo "ethereumHexPrivateKey=${{ secrets.ethereumHexPrivateKey }}" >> .env
+          echo "CHAIN_PORTAL_ETH_NFT_MINT_FEE=${{ secrets.CHAIN_PORTAL_ETH_NFT_MINT_FEE }}" >> .env
+          echo "CHAIN_PORTAL_ETH_TOKEN_MINT_FEE=${{ secrets.CHAIN_PORTAL_ETH_TOKEN_MINT_FEE }}" >> .env
+          echo "ETH_NFT_MINT_FEE=${{ secrets.ETH_NFT_MINT_FEE }}" >> .env
           scp .env root@${{ secrets.SERVER_IP }}:/home/root/chainportal/srv/.env
 
       - name: Start Docker
@@ -70,4 +79,3 @@ jobs:
             docker compose down
             docker compose up -d --build
           EOF
-
