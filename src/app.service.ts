@@ -110,7 +110,6 @@ export class AppService {
       blockchain: txDetails.blockchain as blockchainSymbols,
       paymentPubKey: txDetails.paymentPubKey,
       paymentAmount: new Decimal(txDetails.paymentAmount).toNumber(), // Convert Decimal to number
-      expenseAmount: new Decimal(txDetails.expenseAmount).toNumber(), // Convert Decimal to number
       date: txDetails.date,
       MintTxHistories: txDetails.MintTxHistories.map((mintTx) => ({
         id: mintTx.id,
