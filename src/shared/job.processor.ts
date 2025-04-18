@@ -179,21 +179,30 @@ export class JobProcessor {
         return;
       }
     } else if (data.bChainSymbol === 'ETH') {
+      try {
+        // ------------------ Payment transaction validation ------------------
+        const validation = await this.ethereumSrv.validateEthPaymentTx(data.paymentTxSignature, mintFees.ETH, 'Token');
+        if (!validation.isValid) {wsClientEmitError({id: 0, errorMessage: validation.errorMessage}); return;}
+        wsClientEmit({id: 0, txId: null});
+        // ------------------ Payment transaction validation ------------------
 
+        // ------------------ Deploy token contract ---------------------------------
+        const contractDeployResult = await this.thirdwebSrv.deployErc20TokenContract(data.TokenMetadata, data.paymentTxSignature);
+        if (!contractDeployResult.successful) {wsClientEmitError({id: 1, errorMessage: contractDeployResult.contractAddress}); return;}
+        wsClientEmit({id: 1, txId: null});
+        // ------------------ Deploy token contract ---------------------------------
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        // ------------------ Mint the tokens ------------------------------------
+        const minted = await this.thirdwebSrv.mintEthTokens(contractDeployResult.contractAddress, contractDeployResult.deployCostInEth,
+          contractDeployResult.deployTx, validation.senderPubkey, validation.receivedEthAmount, data.TokenMetadata.supply, data.TokenMetadata.decimals, data.paymentTxSignature);
+        if (!minted.successful) {wsClientEmitError({id: 2, errorMessage: minted.txId}); return;}
+        wsClientEmit({id: 2, txId: minted.txId});
+        // ------------------ Mint the tokens ------------------------------------
+      } catch (error) {
+        console.error('Ethereum token minting job failed: ', error);
+        wsClientEmitError({id: -1, errorMessage: 'Ethereum token minting failed. Please try again.'});
+        return;
+      }
     } else {
       // TODO - Add support for other blockchains later
       wsClientEmitError({id: 0, errorMessage: 'Unsupported blockchain for token minting. Please use a different blockchain'});

@@ -1,20 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { createThirdwebClient, ThirdwebClient } from "thirdweb";
+import { createThirdwebClient, prepareContractCall, ThirdwebClient } from "thirdweb";
 import { upload } from "thirdweb/storage";
 import { ConfigService } from '@nestjs/config';
 import { assetType } from 'src/shared/types';
 import { EthereumService } from '../ethereum/ethereum.service';
-import { cliEnv, NftMetadata } from 'src/shared/interfaces';
+import { cliEnv, NftMetadata, TokenMetadata } from 'src/shared/interfaces';
 import { ChainOptions, defineChain } from "thirdweb/chains";
 import { getContract } from "thirdweb/contract";
 import { mintTo } from "thirdweb/extensions/erc721";
 import { privateKeyToAccount } from "thirdweb/wallets";
 import { EthereumHelpersService } from '../ethereum-helpers/ethereum-helpers.service';
 import { sendAndConfirmTransaction } from "thirdweb";
-import { deployERC721Contract, ERC721ContractType } from "thirdweb/deploys";
+import { deployERC721Contract } from "thirdweb/deploys";
 import { Account } from '@metaplex-foundation/umi';
-import { formatEther } from 'ethers';
+import { formatEther, parseUnits } from 'ethers';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
+import { deployERC20Contract } from "thirdweb/deploys";
 
 @Injectable()
 export class ThirdwebService {
@@ -168,13 +169,142 @@ export class ThirdwebService {
         }
     }
 
-    // Deploy thirdweb contract on Ethereum to mint NFTs
-    async deployNftContract(chain: Readonly<ChainOptions & {rpc: string;}>, account: Account<any>, type: ERC721ContractType = "TokenERC721") {
-        const contract = await deployERC721Contract({
-            chain, client: this.thirdwebClient, account, type,
+    // Deploy erc20 ethereum token contract on Ethereum blockchain with thirdweb
+    async deployErc20TokenContract(metadata: TokenMetadata, paymentTxSignature: string): Promise<
+        {successful: boolean, contractAddress: string, deployCostInEth: number, deployTx: string}> {
+        try {
+            //? May need to provide some custom RPC to defineChain if it gives error to often, example: 
+            // rpc: `https://rpc.ankr.com/eth${this.isMainnet && '_sepolia'}`,
+            const chain = defineChain({
+                id: this.isMainnet ? 1 : 11155111,
+                name: this.isMainnet ? 'Ethereum' : 'Sepolia',
+                nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18}
+            });
+
+            // Create account from private key
+            const account = privateKeyToAccount({client: this.thirdwebClient,
+                privateKey: this.ethereumHelpersSrv.getChainPortalWallet().privateKey
+            });
+
+            // Deploy token contract
+            const contractAddress = await this.deployTokenContract(chain, account, metadata);            
+        
+            // Get the exact contract deployment fee in ETH, or at least the estimated value from .env
+            let deployCostInEth = parseFloat(this.configSrv.get<string>('ETH_TOKEN_CONTRACT_DEPLOY_FEE'));
+            let deployTx = contractAddress;
+            try {
+                const contractLogs = await this.ethereumSrv.provider.getLogs({
+                    address: contractAddress, fromBlock: 0, toBlock: "latest"});
+                deployTx = contractLogs[0].transactionHash;
+                const tx = await this.ethereumSrv.provider.getTransactionReceipt(deployTx);
+                deployCostInEth = parseFloat(formatEther(tx.gasUsed * tx.gasPrice));
+            } catch (error) {
+                console.log('Couldn\'t calculate the exact ERC20 token contract deployment fee, so using the default value from .env due to this error:', error);
+            }
+
+            return {successful: true, contractAddress, deployCostInEth, deployTx};
+        } catch (error) {
+            console.error(`Error durring erc20 token contract deployment on Ethereum via thirdweb: `, error);
+
+            // Posible fee for erc20 token contract deployment
+            let tokenContractDeploymentFee = parseFloat(this.configSrv.get<string>('ETH_TOKEN_CONTRACT_DEPLOY_FEE'));
+    
+            // Redirect the payment after deducting potential fees
+            const redirect = await this.ethereumSrv.redirectEthPayment(paymentTxSignature, 'Token', tokenContractDeploymentFee, [
+                {txSignature: "ERC20 token contract deployment failed with Thirdweb on Ethereum blockchain.", type: 'contract deployment'}]);
+            if (redirect.isValid) {
+                return {successful: false, deployCostInEth: tokenContractDeploymentFee, deployTx: '', contractAddress: `Unable to deploy ERC20 token contract on Ethereum via Thirdweb, so your payment was redirected after deducting the estimated fee(s). Please try again.`};
+            } else {
+                return {successful: false, deployCostInEth: tokenContractDeploymentFee, deployTx: '', contractAddress: `Unable to deploy ERC20 token contract on Ethereum via Thirdweb, so your payment was redirected but maybe failed. Please try again.`};
+            }
+        }
+    }
+
+    // Mint tokens on Ethereum blockchain with predeployed thirdweb ERC20 token contract
+    async mintEthTokens(contractAddress: string, ethContractDeployCost: number, contractDeployTx: string, toPubkey: string, ethPaymentAmount: number, 
+        tokenSupply: number, tokenDecimals: number, paymentTxSignature: string): Promise<{successful: boolean, txId: number | string}> {
+        try {
+            //? May need to provide some custom RPC to defineChain if it gives error to often, example: 
+            // rpc: `https://rpc.ankr.com/eth${this.isMainnet && '_sepolia'}`,
+            const chain = defineChain({
+                id: this.isMainnet ? 1 : 11155111,
+                name: this.isMainnet ? 'Ethereum' : 'Sepolia',
+                nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18}
+            });
+
+            // Create account from private key
+            const account = privateKeyToAccount({client: this.thirdwebClient,
+                privateKey: this.ethereumHelpersSrv.getChainPortalWallet().privateKey
+            });
+
+            // Get token contract         
+            const contract = getContract({client: this.thirdwebClient, chain, address: contractAddress});
+
+            // Mint the tokens
+            const transaction = prepareContractCall({
+                contract, method: "function mintTo(address to, uint256 amount)",
+                params: [toPubkey, parseUnits(String(tokenSupply), 18-tokenDecimals)], // TODO - The token decimals are not respected; I can only use 18 with the ERC20 Thirdweb contract.
+            });
+            const result = await sendAndConfirmTransaction({transaction, account});
+            if (result.status !== 'success') throw new Error(`Ethereum ERC20 token minting error, using Thirdweb: ${result}`);
+            const mintCostInEth = parseFloat(formatEther(result.gasUsed * result.effectiveGasPrice));
+
+            // Save the transaction to the db, bc it was successful
+            const mintTxHistory = await this.prismaSrv.saveMintTxHistory({
+                assetType: 'Token',
+                blockchain: 'ETH',
+                paymentPubKey: toPubkey,
+                paymentAmount: ethPaymentAmount,
+                expenseAmount: ethContractDeployCost + mintCostInEth,
+                paymentTxSignature: paymentTxSignature,
+                rewardTxs: [
+                    {txSignature: contractDeployTx, type: 'contract deployment'},
+                    {txSignature: result.transactionHash, type: 'mint'}
+                ]
+            });
+            // Return the mint transaction db history id
+            return {successful: true, txId: mintTxHistory.mainTx.id};
+        } catch (error) {
+            console.error(`Error minting tokens on Ethereum via thirdweb: `, error);
+
+            // Posible fee for token minting in ETH
+            const tokenMintFee = parseFloat(this.configSrv.get<string>('ETH_TOKEN_MINT_FEE'));
+    
+            // Redirect the payment after deducting potential fees
+            const redirect = await this.ethereumSrv.redirectEthPayment(paymentTxSignature, 'Token', ethContractDeployCost + tokenMintFee, [
+                {txSignature: contractDeployTx, type: 'contract deployment'},
+                {txSignature: "Token minting failed with Thirdweb on Ethereum blockchain.", type: 'mint'}]);
+            if (redirect.isValid) {
+                return {successful: false, txId: `Unable to mint tokens on Ethereum via Thirdweb so your payment was redirected after deducting the estimated fee(s). Please try again.`};
+            } else {
+                return {successful: false, txId: `Unable to mint tokens on Ethereum via Thirdweb so your payment was redirected but maybe failed. Please try again.`};
+            }
+        }
+    }
+
+    // Deploy thirdweb contract on Ethereum to mint NFTs (use defineChain() for chain)
+    async deployNftContract(chain: Readonly<ChainOptions & {rpc: string;}>, account: Account<any>) {
+        return await deployERC721Contract({
+            chain, client: this.thirdwebClient, account, type: "TokenERC721",
             params: {name: "ChainPortal", symbol: "CP", 
-                description: "This contract allows minting of NFTs on the Ethereum blockchain, with each NFT being generated by users through the ChainPortal platform."}
+                description: "This contract allows NFT minting on the Ethereum blockchain, with each NFT being generated by users through the ChainPortal platform."}
         });
-        return contract;
+    }
+
+    // Deploy thirdweb contract on Ethereum to mint tokens (use defineChain() for chain)
+    async deployTokenContract(chain: Readonly<ChainOptions & {rpc: string;}>, account: Account<any>, metadata: TokenMetadata) {
+        return await deployERC20Contract({
+            chain,
+            account,
+            type: "TokenERC20",
+            client: this.thirdwebClient,
+            params: {
+              name: metadata.name,
+              symbol: metadata.symbol,
+              description: metadata.description,
+              external_link: metadata.externalLink,
+              image: metadata.media
+            }
+        });   
     }
 }

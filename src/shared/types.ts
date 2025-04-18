@@ -7,4 +7,4 @@ export type blockchainSymbols = 'ETH' | 'SOL' | 'BSC' | 'MATIC' |
 
 export type blockchainFees = Partial<Record<blockchainSymbols, number>>;
 
-export type rewardTxsType = 'mint' | 'refund' | 'metadata upload';
+export type rewardTxsType = 'mint' | 'refund' | 'metadata upload' | 'contract deployment';
