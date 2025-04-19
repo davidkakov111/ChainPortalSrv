@@ -127,7 +127,7 @@ export class JobProcessor {
     if (!newPayment) return;
 
     // Ensure the metadata is valid
-    const metadataValidation = this.helperSrv.validateTokenMetadata(data.TokenMetadata);
+    const metadataValidation = await this.helperSrv.validateTokenMetadata(data.TokenMetadata);
     if (!metadataValidation.success) {
       // Redirect the payment bc the metadata is invalid
       let redirect: {

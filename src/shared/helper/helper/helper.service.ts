@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { NftMetadata, TokenMetadata } from 'src/shared/interfaces';
+import { fileTypeFromBuffer } from 'file-type';
 
 @Injectable()
 export class HelperService {
@@ -44,13 +45,17 @@ export class HelperService {
     }
 
     // Validate token metadata
-    validateTokenMetadata(metadata: TokenMetadata): {success: boolean, error: string} {
-        if (!metadata.name || metadata.name.length > 32) {
+    async validateTokenMetadata(metadata: TokenMetadata): Promise<{success: boolean, error: string}> {
+        if (!metadata.media) {
+            return {success: false, error: 'Token icon media is required.'};    
+        } else if (!metadata.mediaContentType.includes('image/')) {
+            return {success: false, error: 'Token icon  should be image.'};
+        } else if (!await this.isImageFile(metadata.media)) {
+            return {success: false, error: 'Token icon  should be image.'};
+        } else if (!metadata.name || metadata.name.length > 32) {
             return {success: false, error: 'Token name is required and should be less then 32 character long.'};
         } else if (!metadata.symbol || metadata.symbol.length > 10) {
             return {success: false, error: 'Token symbol is required and should be less then 10 character long.'};
-        } else if (!metadata.media) {
-            return {success: false, error: 'Token icon media is required.'};
         } else if (metadata.supply === 0 || metadata.supply && (metadata.supply < 1 || metadata.supply > 1e19)) {
             return {success: false, error: 'Token supply should be positive number and max 1e19.'};
         } else if (metadata.decimals && (metadata.decimals < 0 || metadata.decimals > 9)) {
@@ -80,5 +85,12 @@ export class HelperService {
         
         // validate attributes type and value length 
         return {success: true, error: ''};
+    }
+
+    // Ensure the Unit8Array media is an image
+    async isImageFile(buffer: Uint8Array): Promise<boolean> {
+        const fileType = await fileTypeFromBuffer(buffer);
+        if (!fileType) return false;   
+        return fileType.mime.startsWith('image/');
     }
 }
