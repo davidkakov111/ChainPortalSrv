@@ -69,6 +69,8 @@ jobs:
           echo "CHAIN_PORTAL_ETH_NFT_MINT_FEE=${{ secrets.CHAIN_PORTAL_ETH_NFT_MINT_FEE }}" >> .env
           echo "CHAIN_PORTAL_ETH_TOKEN_MINT_FEE=${{ secrets.CHAIN_PORTAL_ETH_TOKEN_MINT_FEE }}" >> .env
           echo "ETH_NFT_MINT_FEE=${{ secrets.ETH_NFT_MINT_FEE }}" >> .env
+          echo "ETH_TOKEN_CONTRACT_DEPLOY_FEE=${{ secrets.ETH_TOKEN_CONTRACT_DEPLOY_FEE }}" >> .env
+          echo "ETH_TOKEN_MINT_FEE=${{ secrets.ETH_TOKEN_MINT_FEE }}" >> .env
           scp .env root@${{ secrets.SERVER_IP }}:/home/root/chainportal/srv/.env
 
       - name: Start Docker
