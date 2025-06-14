@@ -23,6 +23,8 @@ export class ThirdwebService {
     cliEnv: cliEnv;
     isMainnet: boolean;
     thirdwebNftContract: string;
+    chain: Readonly<ChainOptions & {rpc: string;}>;
+    account: Account<any>;
 
     constructor(
         private readonly configSrv: ConfigService,
@@ -37,9 +39,21 @@ export class ThirdwebService {
         this.thirdwebNftContract = this.configSrv.get<string>(this.isMainnet ? 'mainnet_thirdweb_nft_contract' : 'sepolia_thirdweb_nft_contract');
         
         // Create thirdweb client
+        // TODO - USE PAID ETH - I can or should make it paid? Or need new ones? - It seems for the first round for a few users it is enough for free just need to clean up the thirdweb storage pined files, but if a  i got a few dollar from the platform it is the time to pay for thsi also!
         const clientId = this.configSrv.get<string>('thirdweb_clinet_id');
         const secretKey = this.configSrv.get<string>('thirdweb_secret_key');
-        this.thirdwebClient = createThirdwebClient({clientId, secretKey});     
+        this.thirdwebClient = createThirdwebClient({clientId, secretKey});    
+        
+        // Define the Ethereum chain and account for thirdweb
+        this.chain = defineChain({
+            id: this.isMainnet ? 1 : 11155111,
+            // TODO - USE PAID ETH - May need to provide some custom RPC if it gives error to often, example: rpc: `https://rpc.ankr.com/eth${this.isMainnet && '_sepolia'}`,
+            name: this.isMainnet ? 'Ethereum' : 'Sepolia',
+            nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18}
+        });
+        this.account = privateKeyToAccount({client: this.thirdwebClient,
+            privateKey: this.ethereumHelpersSrv.getChainPortalWallet().privateKey
+        });
     }
 
     // Upload complete NFT metadata (file & metadata) to IPFS
@@ -115,28 +129,14 @@ export class ThirdwebService {
             // Get ChainPortal's thirdweb TokenERC721 NFT contract
             const contract = getContract({
                 client: this.thirdwebClient,
-                chain: defineChain({
-                    id: this.isMainnet ? 1 : 11155111,
-                    //? May need to provide some custom RPC if it gives error to often, example: rpc: `https://rpc.ankr.com/eth${this.isMainnet && '_sepolia'}`,
-                    name: this.isMainnet ? 'Ethereum' : 'Sepolia',
-                    nativeCurrency: {
-                      name: "Ether",
-                      symbol: "ETH",
-                      decimals: 18,
-                    }
-                }),
+                chain: this.chain,
                 address: this.thirdwebNftContract
-            });
-
-            // Create account from private key
-            const account = privateKeyToAccount({client: this.thirdwebClient,
-                privateKey: this.ethereumHelpersSrv.getChainPortalWallet().privateKey
             });
 
             // Mint the NFT
             // TODO - May need to implement royalty fee for the NFT, bc the metadata royalty is not enough
             const transaction = mintTo({contract, to: toPubkey, nft: metadataUrl});
-            const result = await sendAndConfirmTransaction({transaction, account});
+            const result = await sendAndConfirmTransaction({transaction, account: this.account});
             if (result.status !== 'success') throw new Error(`Ethereum NFT minting error, using Thirdweb: ${result}`);
             const mintCostInEth = parseFloat(formatEther(result.gasUsed * result.effectiveGasPrice));
 
@@ -173,21 +173,8 @@ export class ThirdwebService {
     async deployErc20TokenContract(metadata: TokenMetadata, paymentTxSignature: string): Promise<
         {successful: boolean, contractAddress: string, deployCostInEth: number, deployTx: string}> {
         try {
-            //? May need to provide some custom RPC to defineChain if it gives error to often, example: 
-            // rpc: `https://rpc.ankr.com/eth${this.isMainnet && '_sepolia'}`,
-            const chain = defineChain({
-                id: this.isMainnet ? 1 : 11155111,
-                name: this.isMainnet ? 'Ethereum' : 'Sepolia',
-                nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18}
-            });
-
-            // Create account from private key
-            const account = privateKeyToAccount({client: this.thirdwebClient,
-                privateKey: this.ethereumHelpersSrv.getChainPortalWallet().privateKey
-            });
-
             // Deploy token contract
-            const contractAddress = await this.deployTokenContract(chain, account, metadata);            
+            const contractAddress = await this.deployTokenContract(metadata);            
         
             // Get the exact contract deployment fee in ETH, or at least the estimated value from .env
             let deployCostInEth = parseFloat(this.configSrv.get<string>('ETH_TOKEN_CONTRACT_DEPLOY_FEE'));
@@ -224,28 +211,15 @@ export class ThirdwebService {
     async mintEthTokens(contractAddress: string, ethContractDeployCost: number, contractDeployTx: string, toPubkey: string, ethPaymentAmount: number, 
         tokenSupply: number, tokenDecimals: number, paymentTxSignature: string): Promise<{successful: boolean, txId: number | string}> {
         try {
-            //? May need to provide some custom RPC to defineChain if it gives error to often, example: 
-            // rpc: `https://rpc.ankr.com/eth${this.isMainnet && '_sepolia'}`,
-            const chain = defineChain({
-                id: this.isMainnet ? 1 : 11155111,
-                name: this.isMainnet ? 'Ethereum' : 'Sepolia',
-                nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18}
-            });
-
-            // Create account from private key
-            const account = privateKeyToAccount({client: this.thirdwebClient,
-                privateKey: this.ethereumHelpersSrv.getChainPortalWallet().privateKey
-            });
-
             // Get token contract         
-            const contract = getContract({client: this.thirdwebClient, chain, address: contractAddress});
+            const contract = getContract({client: this.thirdwebClient, chain: this.chain, address: contractAddress});
 
             // Mint the tokens
             const transaction = prepareContractCall({
                 contract, method: "function mintTo(address to, uint256 amount)",
                 params: [toPubkey, parseUnits(String(tokenSupply), 18-tokenDecimals)], // TODO - The token decimals are not respected; I can only use 18 with the ERC20 Thirdweb contract.
             });
-            const result = await sendAndConfirmTransaction({transaction, account});
+            const result = await sendAndConfirmTransaction({transaction, account: this.account});
             if (result.status !== 'success') throw new Error(`Ethereum ERC20 token minting error, using Thirdweb: ${result}`);
             const mintCostInEth = parseFloat(formatEther(result.gasUsed * result.effectiveGasPrice));
 
@@ -282,20 +256,20 @@ export class ThirdwebService {
         }
     }
 
-    // Deploy thirdweb contract on Ethereum to mint NFTs (use defineChain() for chain)
-    async deployNftContract(chain: Readonly<ChainOptions & {rpc: string;}>, account: Account<any>) {
+    // Deploy thirdweb contract on Ethereum to mint NFTs
+    async deployNftContract() {
         return await deployERC721Contract({
-            chain, client: this.thirdwebClient, account, type: "TokenERC721",
+            chain: this.chain, client: this.thirdwebClient, account: this.account, type: "TokenERC721",
             params: {name: "ChainPortal", symbol: "CP", 
                 description: "This contract allows NFT minting on the Ethereum blockchain, with each NFT being generated by users through the ChainPortal platform."}
         });
     }
 
-    // Deploy thirdweb contract on Ethereum to mint tokens (use defineChain() for chain)
-    async deployTokenContract(chain: Readonly<ChainOptions & {rpc: string;}>, account: Account<any>, metadata: TokenMetadata) {
+    // Deploy thirdweb contract on Ethereum to mint tokens
+    async deployTokenContract(metadata: TokenMetadata) {
         return await deployERC20Contract({
-            chain,
-            account,
+            chain: this.chain,
+            account: this.account,
             type: "TokenERC20",
             client: this.thirdwebClient,
             params: {

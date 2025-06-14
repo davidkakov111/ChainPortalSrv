@@ -19,6 +19,7 @@ export class EthereumService {
     ) {
         const strCliEnv = this.configSrv.get<string>('cli_environment');
         this.cliEnv = JSON.parse(strCliEnv) as cliEnv;
+        // TODO - USE PAID ETH - ethereum rpc endpoint provider
         this.provider = getDefaultProvider(this.cliEnv.blockchainNetworks.ethereum.selected);
     }
 
@@ -149,22 +150,6 @@ export class EthereumService {
         const tx = await this.provider.getTransaction(txHash);
         if (!tx) return { success: false, error: "Payment transaction not found" };
         return {success: true, txDetails: tx};
-    }
-
-    //? --- Currently unused --- Ensure the payment transaction was sent to the correct recipent with the correct amount
-    verifyPaymentTx(txDetails: TransactionResponse, expectedRecipientHexPubkey: string, expectedEthAmount: number): {
-        isValid: boolean,
-        sender: string,
-        txAmount: number,
-    } {
-        const isRecipientCorrect = txDetails.to === expectedRecipientHexPubkey;
-        const sentEthAmount = parseFloat(txDetails.value ? formatEther(txDetails.value) : "0");
-        const isAmountCorrect = sentEthAmount >= expectedEthAmount;
-        return {
-            isValid: isRecipientCorrect && isAmountCorrect,
-            sender: txDetails.from,
-            txAmount: sentEthAmount
-        };
     }
 
     // Get the current estimated fee in Eth, for a simple ETH transfer transaction

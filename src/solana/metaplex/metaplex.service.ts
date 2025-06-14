@@ -30,9 +30,11 @@ export class MetaplexService {
 
         // Determine the cluster (Devnet or Mainnet)
         const selectedCluster = cliEnv.blockchainNetworks.solana.selected === 'devnet' ? 'devnet' : 'mainnet-beta';
+        // TODO - USE PAID SOL - Use paid solana rpc endpoint
         const clusterUrl = clusterApiUrl(selectedCluster);
 
         // Create umi with ChainPortal keypair, mplCore, mplTokenMetadata, and irys uploader
+        // Note - I think irys setup with umi like this is fine for havy load also, bc i pay at use with fee
         const umi = createUmi(clusterUrl).use(mplCore()).use(
             irysUploader({address: selectedCluster === 'devnet' ? 'https://devnet.irys.xyz' : 'https://node1.irys.xyz'}));
         const umiSigner = createSignerFromKeypair(umi, fromWeb3JsKeypair(keypair));
