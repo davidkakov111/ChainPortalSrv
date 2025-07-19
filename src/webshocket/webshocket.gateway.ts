@@ -37,7 +37,7 @@ export class WebshocketGateway implements OnGatewayConnection, OnGatewayDisconne
   @SubscribeMessage('mint-nft')
   async handleNftMintRequest(
     @ConnectedSocket() client: Socket, 
-    @MessageBody() data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
+    @MessageBody() data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata, signedSolTxBase58?: string}
   ): Promise<void> {
     try {
       // Create functions to emit status updates to the client
@@ -63,7 +63,7 @@ export class WebshocketGateway implements OnGatewayConnection, OnGatewayDisconne
   @SubscribeMessage('mint-token')
   async handleTokenMintRequest(
     @ConnectedSocket() client: Socket, 
-    @MessageBody() data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, TokenMetadata: TokenMetadata},
+    @MessageBody() data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, TokenMetadata: TokenMetadata, signedSolTxBase58?: string},
   ): Promise<void> {
     try {
       // Create functions to emit status updates to the client

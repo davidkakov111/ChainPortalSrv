@@ -109,12 +109,7 @@ export class SolanaService {
 
             // Sign and send transaction
             transaction.sign(fromWallet);
-            const rawTransaction = transaction.serialize();
-            const signature = await this.connection.sendRawTransaction(rawTransaction, {
-                skipPreflight: false,
-                preflightCommitment: 'confirmed'
-            });
-            
+            const signature = await this.sendRawTransaction(transaction.serialize());
             return { success: true, signature };
         } catch (error) {
             console.error('Error in transferSol:', error);
@@ -124,6 +119,14 @@ export class SolanaService {
             };
         }
     }
+
+    // Send solana raw transaction
+    async sendRawTransaction(rawTransaction: Uint8Array<ArrayBufferLike> | Buffer<ArrayBufferLike>) {
+        return await this.connection.sendRawTransaction(rawTransaction, {
+            skipPreflight: false,
+            preflightCommitment: 'confirmed'
+        });
+    };
 
     // Get transfer instruction by transaction signature
     async transferIxByTxSignature(txSignature: string): Promise<{

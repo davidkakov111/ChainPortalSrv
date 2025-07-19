@@ -8,6 +8,7 @@ import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { MetaplexService } from 'src/solana/metaplex/metaplex.service';
 import { EthereumService } from 'src/ethereum/ethereum/ethereum.service';
 import { ThirdwebService } from 'src/ethereum/thirdweb/thirdweb.service';
+import bs58 from "bs58";
 
 // Job processor to run codes in background, independent of the client connection
 @Injectable()
@@ -27,8 +28,19 @@ export class JobProcessor {
   async handleNftMintingJob(
     wsClientEmit: (message: any) => void, 
     wsClientEmitError: (errorMessage: any) => void, 
-    data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata}
+    data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, NftMetadata: NftMetadata, signedSolTxBase58?: string}
   ) {
+    // If the Solana transaction is already signed, send it to the blockchain to get the transaction signature
+    if (data.signedSolTxBase58) {
+      try {
+        data.paymentTxSignature = await this.solanaService.sendRawTransaction(bs58.decode(data.signedSolTxBase58));
+      } catch (error) {
+        console.error('Solana NFT minting: Failed to send the signed payment transaction to the blockchain:', error);
+        wsClientEmitError({id: 0, errorMessage: 'Transaction failed to send. No balance was changed. Please try again.'});
+        return;
+      }
+    }
+
     // Ensure the payment transaction wasn't used before
     const newPayment = await this.wsJobProcessorNewTransactionValidator(wsClientEmitError, data.paymentTxSignature);
     if (!newPayment) return;
@@ -120,8 +132,19 @@ export class JobProcessor {
   async handleTokenMintingJob(
     wsClientEmit: (message: any) => void, 
     wsClientEmitError: (errorMessage: any) => void, 
-    data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, TokenMetadata: TokenMetadata}
+    data: {bChainSymbol: blockchainSymbols, paymentTxSignature: string, TokenMetadata: TokenMetadata, signedSolTxBase58?: string}
   ) {
+    // If the Solana transaction is already signed, send it to the blockchain to get the transaction signature
+    if (data.signedSolTxBase58) {
+      try {
+        data.paymentTxSignature = await this.solanaService.sendRawTransaction(bs58.decode(data.signedSolTxBase58));
+      } catch (error) {
+        console.error('Solana Token minting: Failed to send the signed payment transaction to the blockchain:', error);
+        wsClientEmitError({id: 0, errorMessage: 'Transaction failed to send. No balance was changed. Please try again.'});
+        return;
+      }
+    }
+ 
     // Ensure the payment transaction wasn't used before
     const newPayment = await this.wsJobProcessorNewTransactionValidator(wsClientEmitError, data.paymentTxSignature);
     if (!newPayment) return;
