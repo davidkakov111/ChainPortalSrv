@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { assetType, rewardTxsType } from 'src/shared/types';
-import { formatEther, getDefaultProvider, AbstractProvider, TransactionResponse, parseEther, FeeData } from "ethers";
+import { formatEther, AbstractProvider, TransactionResponse, parseEther, FeeData, JsonRpcProvider } from "ethers";
 import { ConfigService } from '@nestjs/config';
 import { cliEnv } from 'src/shared/interfaces';
 import { EthereumHelpersService } from 'src/ethereum/ethereum-helpers/ethereum-helpers.service';
@@ -19,8 +19,8 @@ export class EthereumService {
     ) {
         const strCliEnv = this.configSrv.get<string>('cli_environment');
         this.cliEnv = JSON.parse(strCliEnv) as cliEnv;
-        // TODO - USE PAID ETH - ethereum rpc endpoint provider
-        this.provider = getDefaultProvider(this.cliEnv.blockchainNetworks.ethereum.selected);
+        // TODO - USE PAID ETH - Use paid plan for my alchemy account with this api key, if needed
+        this.provider = new JsonRpcProvider(`https://eth-${this.cliEnv.blockchainNetworks.ethereum.selected}.g.alchemy.com/v2/${this.configSrv.get('alchemy_api_key')}`);
     }
 
     // Transfer specific amount of ETH to a destination address, from ChainPortal's wallet (Dont wait for confirmation)

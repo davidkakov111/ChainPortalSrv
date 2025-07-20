@@ -47,7 +47,8 @@ export class ThirdwebService {
         // Define the Ethereum chain and account for thirdweb
         this.chain = defineChain({
             id: this.isMainnet ? 1 : 11155111,
-            // TODO - USE PAID ETH - May need to provide some custom RPC if it gives error to often, example: rpc: `https://rpc.ankr.com/eth${this.isMainnet && '_sepolia'}`,
+            // TODO - USE PAID ETH - Use paid plan for my alchemy account with this api key, if needed 
+            rpc: `https://eth-${this.cliEnv.blockchainNetworks.ethereum.selected}.g.alchemy.com/v2/${this.configSrv.get('alchemy_api_key')}`,                
             name: this.isMainnet ? 'Ethereum' : 'Sepolia',
             nativeCurrency: {name: "Ether", symbol: "ETH", decimals: 18}
         });
