@@ -60,6 +60,7 @@ jobs:
           echo "CHAIN_PORTAL_SOL_TOKEN_MINT_FEE=${{ secrets.CHAIN_PORTAL_SOL_TOKEN_MINT_FEE }}" >> .env
           echo "SOL_NFT_MINT_FEE=${{ secrets.SOL_NFT_MINT_FEE }}" >> .env
           echo "SOL_TOKEN_MINT_FEE=${{ secrets.SOL_TOKEN_MINT_FEE }}" >> .env
+          echo "alchemy_api_key=${{ secrets.alchemy_api_key }}" >> .env
           echo "thirdweb_clinet_id=${{ secrets.thirdweb_clinet_id }}" >> .env
           echo "thirdweb_secret_key=${{ secrets.thirdweb_secret_key }}" >> .env
           echo "sepolia_thirdweb_nft_contract=${{ secrets.sepolia_thirdweb_nft_contract }}" >> .env

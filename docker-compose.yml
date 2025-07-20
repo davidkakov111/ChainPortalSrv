@@ -67,6 +67,7 @@ services:
       CHAIN_PORTAL_SOL_TOKEN_MINT_FEE: ${CHAIN_PORTAL_SOL_TOKEN_MINT_FEE}
       SOL_NFT_MINT_FEE: ${SOL_NFT_MINT_FEE}
       SOL_TOKEN_MINT_FEE: ${SOL_TOKEN_MINT_FEE}
+      alchemy_api_key: ${alchemy_api_key}
       thirdweb_clinet_id: ${thirdweb_clinet_id}
       thirdweb_secret_key: ${thirdweb_secret_key}
       sepolia_thirdweb_nft_contract: ${sepolia_thirdweb_nft_contract}
