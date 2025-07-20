@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { LAMPORTS_PER_SOL, clusterApiUrl } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { ConfigService } from '@nestjs/config';
 import { Attribute, cliEnv, NftMetadata, TokenMetadata } from 'src/shared/interfaces';
 import { SolanaHelpersService } from '../solana-helpers/solana-helpers.service';
@@ -30,8 +30,8 @@ export class MetaplexService {
 
         // Determine the cluster (Devnet or Mainnet)
         const selectedCluster = cliEnv.blockchainNetworks.solana.selected === 'devnet' ? 'devnet' : 'mainnet-beta';
-        // TODO - USE PAID SOL - Use paid solana rpc endpoint
-        const clusterUrl = clusterApiUrl(selectedCluster);
+        // TODO - USE PAID SOL - Use paid plan for my helius account with this api key, if needed   
+        const clusterUrl = `https://${cliEnv.blockchainNetworks.solana.selected}.helius-rpc.com/?api-key=${this.configSrv.get('helius_api_key')}`;
 
         // Create umi with ChainPortal keypair, mplCore, mplTokenMetadata, and irys uploader
         // Note - I think irys setup with umi like this is fine for havy load also, bc i pay at use with fee

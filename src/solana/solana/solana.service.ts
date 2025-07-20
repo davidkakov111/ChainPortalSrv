@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Connection, ConfirmOptions, TransactionSignature, clusterApiUrl, VersionedTransactionResponse, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, MessageCompiledInstruction, ConfirmedTransactionMeta } from '@solana/web3.js';
+import { Connection, ConfirmOptions, TransactionSignature, VersionedTransactionResponse, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, MessageCompiledInstruction, ConfirmedTransactionMeta } from '@solana/web3.js';
 import { cliEnv } from 'src/shared/interfaces';
 import { PrismaService } from 'src/prisma/prisma/prisma.service';
 import { assetType, rewardTxsType } from 'src/shared/types';
@@ -20,8 +20,10 @@ export class SolanaService {
         // Initialize connection to the Solana cluster
         const strCliEnv = this.configSrv.get<string>('cli_environment');
         this.cliEnv = JSON.parse(strCliEnv) as cliEnv;
-        // TODO - USE PAID SOL - Use paid solana rpc endpoint
-        this.connection = new Connection(clusterApiUrl(this.cliEnv.blockchainNetworks.solana.selected === 'devnet' ? 'devnet' : 'mainnet-beta'));
+        // TODO - USE PAID SOL - Use paid plan for my helius account with this api key, if needed
+        this.connection = new Connection(
+            `https://${this.cliEnv.blockchainNetworks.solana.selected}.helius-rpc.com/?api-key=${this.configSrv.get('helius_api_key')}`
+        );
     }
 
     // Wait for a transaction to reach a specific confirmation level on the blockchain
