@@ -144,20 +144,6 @@ export class SolanaService {
         };
         errorMessage?: undefined;
     }> {
-
-        // TODO - Remove it:
-        console.log(Date.now(), 'Waiting for the payment transaction to be confirmed...');
-        await new Promise(resolve => setTimeout(resolve, 10000)); // waits 10 seconds
-        console.log(Date.now(), 'Payment transaction confirmation check started...');
-
-
-
-
-
-
-
-
-
         // Wait for the payment transaction to be confirmed
         const isTxConfirmed = await this.waitForTransaction(txSignature, 'confirmed');
         if (!isTxConfirmed) {

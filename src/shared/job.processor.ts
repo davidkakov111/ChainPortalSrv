@@ -34,6 +34,7 @@ export class JobProcessor {
     if (data.signedSolTxBase58) {
       try {
         data.paymentTxSignature = await this.solanaService.sendRawTransaction(bs58.decode(data.signedSolTxBase58));
+        await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds to give the blockchain time to process and include the transaction
       } catch (error) {
         console.error('Solana NFT minting: Failed to send the signed payment transaction to the blockchain:', error);
         wsClientEmitError({id: 0, errorMessage: 'Transaction failed to send. No balance was changed. Please try again.'});
@@ -138,6 +139,7 @@ export class JobProcessor {
     if (data.signedSolTxBase58) {
       try {
         data.paymentTxSignature = await this.solanaService.sendRawTransaction(bs58.decode(data.signedSolTxBase58));
+        await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds to give the blockchain time to process and include the transaction
       } catch (error) {
         console.error('Solana Token minting: Failed to send the signed payment transaction to the blockchain:', error);
         wsClientEmitError({id: 0, errorMessage: 'Transaction failed to send. No balance was changed. Please try again.'});
