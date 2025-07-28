@@ -41,4 +41,11 @@ export class AppController {
   async submitFeedback(@Body() feedbackData: feedback): Promise<any> {
     return this.appSrv.saveFeedback(feedbackData);
   }
+
+  // TODO - This way i expose my helius api key indirectly, need to find a better way, probably rate limiting if needed
+  // Solana proxy with api key
+  @Post('solana-proxy')
+  async solanaProxy(@Body() body: any): Promise<any> {
+    return this.appSrv.solanaProxy(body);
+  }
 }

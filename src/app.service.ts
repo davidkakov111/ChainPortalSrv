@@ -8,6 +8,7 @@ import { HelperService } from './shared/helper/helper/helper.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { SolanaHelpersService } from './solana/solana-helpers/solana-helpers.service';
 import { EthereumHelpersService } from './ethereum/ethereum-helpers/ethereum-helpers.service';
+import axios from 'axios';
 
 @Injectable()
 export class AppService {
@@ -141,6 +142,20 @@ export class AppService {
       return {message: "Thank you!"};
     } else {
       throw new HttpException('The rating should be between 5 and 1.', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  // Solana proxy with api key
+  async solanaProxy(body: any): Promise<any> {
+    try {
+      const endpoint = `https://${this.getCliEnv().blockchainNetworks.solana.selected}.helius-rpc.com/?api-key=${this.configSrv.get('helius_api_key')}`;
+      const heliusResponse = await axios.post(endpoint, body);
+      return heliusResponse.data;
+    } catch (error) {
+      throw new HttpException(
+        `Solana proxy failed: ${error?.response?.data}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }
