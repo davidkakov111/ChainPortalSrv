@@ -68,6 +68,7 @@ export class AppService {
       } else if (i === "ETH") {
         result.ETH = parseFloat(this.configSrv.get<string>(`CHAIN_PORTAL_ETH_${assetType.toUpperCase()}_MINT_FEE`));  
         result.ETH += parseFloat(this.configSrv.get<string>(`ETH_${assetType.toUpperCase()}_MINT_FEE`));
+        if (assetType === 'Token') result.ETH += parseFloat(this.configSrv.get<string>(`ETH_TOKEN_CONTRACT_DEPLOY_FEE`));
         // await this.prismaSrv.upsertMintingFee(assetType, 'ETH', result.ETH);
       } // TODO - Need to add options for another suported bchains later
     }
