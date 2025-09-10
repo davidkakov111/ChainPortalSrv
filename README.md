@@ -1,31 +1,42 @@
+# ChainPortal Server
 
-## Project setup
-# Install the dependencies
+> Multi-chain NFT & token management platform (Node.js project) — portfolio/demo project
+
+## Overview
+
+ChainPortal is a full-stack Web3 project built with Node.js and Angular, showcasing multi-chain NFT and token management.  
+This project was created as a **portfolio and learning exercise** to explore:
+
+- Ethereum & Solana integration
+- NFT minting workflows
+- Token management
+- Wallet integration
+- Frontend/UX design for Web3 applications
+
+---
+
+## Features
+
+- REST + WebSocket API for the Angular frontend
+- Mint NFTs and tokens on Ethereum & Solana testnets
+- Event broadcasting via WebSockets
+- Financial-grade workflows
+
+---
+
+## Installation
+
 ```bash
-$ npm install
-```
-# Compile and run the project
+# Clone the repo
+git clone https://github.com/davidkakov111/ChainPortalSrv.git
 
-```bash
-# development
-$ npm run start
+# Navigate to project
+cd ./ChainPortalSrv/
 
-# watch mode
-$ npm run start:dev
+# Install dependencies
+npm install
 
-# production mode
-$ npm run start:prod
-```
+# Create your .env file based on .env.example
 
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
+# Serve the Nest.js app
+nest start
