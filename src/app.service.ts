@@ -75,7 +75,7 @@ export class AppService {
 
     // Calculate & assign the metadata upload costs
     if (result.SOL) {
-      result.SOL += await this.metaplexSrv.calcArweaveMetadataUploadFee(metadataByteSize);
+      result.SOL += 0; //TODO - I removed this to avoid errors, bc i will no longer maintain this repo - await this.metaplexSrv.calcArweaveMetadataUploadFee(metadataByteSize);
     } else if (result.ETH) {
       // Uploading metadata to IPFS is currently free in ETH. In the future, there might be a small cost, but it can be ignored for now.
       result.ETH += 0;
