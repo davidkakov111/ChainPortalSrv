@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { NftMetadata, TokenMetadata } from 'src/shared/interfaces';
-import { fileTypeFromBuffer } from 'file-type';
 
 @Injectable()
 export class HelperService {
@@ -89,6 +88,7 @@ export class HelperService {
 
     // Ensure the Unit8Array media is an image
     async isImageFile(buffer: Uint8Array): Promise<boolean> {
+        const { fileTypeFromBuffer } = await import('file-type'); // <-- dynamic ESM import
         const fileType = await fileTypeFromBuffer(buffer);
         if (!fileType) return false;   
         return fileType.mime.startsWith('image/');
